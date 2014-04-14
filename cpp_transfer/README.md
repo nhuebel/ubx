@@ -93,7 +93,7 @@ return block
 
       cpp = true,
 }
-~/workspace/microblx_cmake$ cat cpp_receiver_block.lua
+~/workspace/microblx_cmake$ vim cpp_receiver_block.lua
 return block
 {
       name="cpp_receiver",
