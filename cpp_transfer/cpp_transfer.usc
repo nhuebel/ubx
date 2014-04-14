@@ -1,0 +1,31 @@
+-- -*- mode: lua; -*-
+
+return bd.system {
+   imports = {
+      "std_types/stdtypes/stdtypes.so",
+      "std_blocks/ptrig/ptrig.so",
+      "std_blocks/lfds_buffers/lfds_cyclic.so",
+      "std_blocks/hexdump/hexdump.so",
+      "blocks/cpp_sender.so",
+      "blocks/cpp_receiver.so",
+   },
+   
+   blocks = {
+      {name="ptrig1", type="std_triggers/ptrig"},
+      {name="fifo1", type="lfds_buffers/cyclic"},
+      {name="cpp_sender1", type="cpp_sender"},
+      {name="cpp_receiver1", type="cpp_receiver"},
+   },
+   
+   connections = {
+-- connect the cpp_sender block with the cpp_receiver block through a fifo block
+      {src="cpp_sender1.output", tgt="fifo1"},
+      {src="fifo1", tgt="cpp_receiver1.input"},
+   },
+   
+   configurations = {
+      { name="fifo1", config={type_name="struct cpp_data", buffer_len=1}},
+      { name="ptrig1", config={period={sec=1,usec=0}, trig_blocks={{b="#cpp_sender1", num_steps=1, measure=0},
+                                                                   {b="#cpp_receiver1", num_steps=1, measure=0}}}}
+   },
+}
