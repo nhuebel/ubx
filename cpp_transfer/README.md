@@ -391,3 +391,42 @@ META MODEL: c array
 DATA: test_data
 ...
 ```
+
+Generate pure C application (from ubx system composition file!)
+-----------------------------------
+(note: still under development. Steps like checkout of dev branch, manually file copying and CMakeFile editing will be automated later on)
+
+First, checkout dev branch of microblx_cmake package
+```sh
+git checkout dev
+```
+
+Then, generate the source file for the application with
+```sh
+./generate_capp -o cpp_transfer_app -f <path-to-cpp_transfer>/cpp_transfer.usc --webif
+```
+and you will find the source as "cpp_transfer_app.c".
+
+As last step, it is necessary to compile the source, by copying the source in one project and adding the following to your CMakeFiles.txt
+```sh
+add_executable(cpp_transfer_app src_bin/cpp_transfer_app.c)
+target_link_libraries(cpp_transfer_app ${UBX_LIBRARIES})
+add_dependencies(cpp_transfer_app gen_hexarr)
+```
+Of course, it is possible to do the same if you are using a plain Makefile system.
+
+Compile everything and you should obtain an executable "cpp_transfer_app"
+
+By launch it, you obtain
+```sh
+All modules have been loaded!
+All modules have been created!
+ptrig_handle_config: ptrig1_1 config: period=0s:0us, policy=SCHED_OTHER, prio=0, stacksize=0 (0=default size)
+All blocks have been initialized!
+ptrig_start:  
+All blocks have been started!
+loaded request_handler()
+webif block lauched on port 8888
+Everything is up and running! hit enter to quit
+```
+and you can navigate, as usual, to the web interface.

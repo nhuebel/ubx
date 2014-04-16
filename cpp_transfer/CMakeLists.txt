@@ -8,6 +8,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake") ## temporary resources, for U
 # Global
 set(INSTALL_LIB_TYPES_DIR lib/microblx/types CACHE PATH "Installation directory for types libraries")
 set(INSTALL_LIB_BLOCKS_DIR lib/microblx/blocks CACHE PATH "Installation directory for blocks libraries")
+set(INSTALL_BIN_APPS_DIR bin CACHE PATH "Installation directory for bin")
 set(INSTALL_INCLUDE_DIR include/microblx CACHE PATH "Installation directory for header files (types)")
 set(INSTALL_CMAKE_DIR  share/microblx/cmake CACHE PATH  "Installation directory for CMake files") # default ${DEF_INSTALL_CMAKE_DIR}
 
@@ -108,3 +109,10 @@ install(TARGETS cpp_receiver DESTINATION ${INSTALL_LIB_BLOCKS_DIR} EXPORT cpp_re
 set_property(TARGET cpp_receiver PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
 install(EXPORT cpp_receiver-block DESTINATION ${INSTALL_CMAKE_DIR})
 
+add_executable(cpp_transfer_app src_bin/cpp_transfer_app.c)
+target_link_libraries(cpp_transfer_app ${UBX_LIBRARIES})
+add_dependencies(cpp_transfer_app gen_hexarr)
+
+# install cpp_transfer_app
+install(TARGETS cpp_transfer_app DESTINATION ${INSTALL_BIN_APPS_DIR} EXPORT cpp_transfer_app-app)
+set_property(TARGET cpp_transfer_app PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
