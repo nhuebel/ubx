@@ -1,5 +1,5 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
-PROJECT(ubx_zmq_bridge)
+PROJECT(ubx_czmq_bridge)
 
 set(CMAKE_CXX_FLAGS "-Wall -Werror -fvisibility=hidden")
 set(CMAKE_CXX_COMPILER clang++ )
@@ -56,7 +56,7 @@ include_directories(
 )
 
 # Compile library zmqsenderlib
-add_library(zmqsenderlib SHARED ..//ubx_czmq_bridge/src/zmq_sender.cpp )
+add_library(zmqsenderlib SHARED src/zmq_sender.cpp )
 set_target_properties(zmqsenderlib PROPERTIES PREFIX "")
 target_link_libraries(zmqsenderlib ${UBX_LIBRARIES} ${ZMQ_LIBRARIES})
 
@@ -66,7 +66,7 @@ set_property(TARGET zmqsenderlib PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
 install(EXPORT zmqsenderlib-block DESTINATION ${INSTALL_CMAKE_DIR})
 
 # Compile library zmqreceiverlib
-add_library(zmqreceiverlib SHARED ..//ubx_czmq_bridge/src/zmq_receiver.cpp )
+add_library(zmqreceiverlib SHARED src/zmq_receiver.cpp )
 set_target_properties(zmqreceiverlib PROPERTIES PREFIX "")
 target_link_libraries(zmqreceiverlib ${UBX_LIBRARIES} ${ZMQ_LIBRARIES})
 

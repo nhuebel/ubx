@@ -11,7 +11,7 @@
 UBX_MODULE_LICENSE_SPDX(BSD-3-Clause)
 
 
-void receiverThread(zsock_t *pipe, void *arg);
+void* receiverThread(void *arg);
 
 /* define a structure for holding the block local state. By assigning an
  * instance of this struct to the block private_data pointer (see init), this
@@ -24,7 +24,7 @@ struct zmq_receiver_info
 	zsock_t* subscriber;
 
 	// Thread that does the work
-        zactor_t* workerThread;
+	pthread_t workerThread;
 
         /* this is to have fast access to ports for reading and writing, without
          * needing a hash table lookup */
@@ -83,9 +83,7 @@ int zmq_receiver_start(ubx_block_t *b)
         struct zmq_receiver_info *inf = (struct zmq_receiver_info*) b->private_data;
 
 	/* The worker thread handles all incoming data */
-	zactor_t *actor = zactor_new (receiverThread, b);
-	assert (actor);		
-	inf->workerThread = actor;
+	pthread_create(&inf->workerThread, NULL, receiverThread, b);
 
         int ret = 0;
         return ret;
@@ -114,7 +112,7 @@ void zmq_receiver_step(ubx_block_t *b)
 
 }
 
-void receiverThread(zsock_t *pipe, void *arg) {
+void* receiverThread(void *arg) {
     ubx_block_t *b = (ubx_block_t *) arg;
     struct zmq_receiver_info *inf = (struct zmq_receiver_info*) b->private_data;
     std::cout << " receiverThread started." << std::endl;
@@ -153,6 +151,6 @@ void receiverThread(zsock_t *pipe, void *arg) {
     }
 
     /* Clean up */
-    //return 0;
+    return 0;
 
 }
