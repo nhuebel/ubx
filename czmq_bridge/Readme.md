@@ -58,5 +58,4 @@ Authors
 -----
 
 Sebastian Blumenthal
-
 Johan Philips
