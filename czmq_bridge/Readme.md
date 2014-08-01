@@ -57,5 +57,4 @@ BSD
 Authors
 -----
 
-Sebastian Blumenthal
-Johan Philips
+Sebastian Blumenthal & Johan Philips
