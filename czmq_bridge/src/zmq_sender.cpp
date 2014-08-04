@@ -76,24 +76,13 @@ int zmq_sender_init(ubx_block_t *b)
         inf->buffer_length = DEFAULT_BUFFER_LENGTH; //TODO read from config
         inf->buffer = new unsigned char [inf->buffer_length];
 
+        connection_spec_str = (char*) ubx_config_get_data_ptr(b, "connection_spec", &tmplen);
+	connection_spec = std::string(connection_spec_str);
+	std::cout << "ZMQ connection configuration for block " << b->name << " is " << connection_spec << std::endl;
 
-        //try {
-
-        //	inf->context = new zmq::context_t(1);
-        
-	// inf->publisher = new zmq::socket_t(*inf->context, ZMQ_PUB);
-
-        	connection_spec_str = (char*) ubx_config_get_data_ptr(b, "connection_spec", &tmplen);
-			connection_spec = std::string(connection_spec_str);
-			std::cout << "ZMQ connection configuration for block " << b->name << " is " << connection_spec << std::endl;
-
-        //	inf->publisher->bind(connection_spec_str);
-	
-	//	} catch (std::exception e) {
-	//		std::cout << e.what() << " : " << zmq_strerror (errno) << std::endl;
 	pub = zsock_new_pub(connection_spec_str);
 	if(!pub)
-			goto out;
+		goto out;
 	inf->publisher=pub;
 
 
@@ -162,19 +151,19 @@ void zmq_sender_step(ubx_block_t *b)
 //		msg.data = (void*)&buffer;
 //		int read_bytes = length;
 
-		std::cout << "zmq_sender: msg.len = " << data_size(&msg) << " read bytes = " << read_bytes << std::endl;
+		std::cout << "zmq_sender: read bytes = " << read_bytes << std::endl;
 
 		/* Setup ZMQ message*/
 		//hexdump((unsigned char *)msg.data, read_bytes, 16);
 		//zmq::message_t message(msg.len);
-		zmsg_t* message = zmsg_new();
-		zmsg_addstr(message, (char*)msg.data);
-//		memcpy(message.data(), (char *)msg.data, read_bytes);
-
+		//zmsg_t* message = zmsg_new();
+		zframe_t* message = zframe_new(msg.data, read_bytes);
+		std::cout << "Created frame of length " << zframe_size(message) << std::endl;
 
 		/* Send the message */
 //		zsock_send(inf->publisher->send(message);
-		zsock_send(inf->publisher, &message);
+		int result = zframe_send(&message, inf->publisher,0);
+		std::cout << "send message with result " << result << std::endl;
 
 }
 

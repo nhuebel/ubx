@@ -61,7 +61,9 @@ int zmq_receiver_init(ubx_block_t *b)
         	//inf->subscriber->connect(connection_spec_str);
         	//inf->subscriber->setsockopt(ZMQ_SUBSCRIBE, "1", 0); // message filter options
 
-		sub = zsock_new_sub(connection_spec_str, "1");
+		sub = zsock_new_sub(connection_spec_str, "");
+		zsock_set_subscribe(sub, "");
+
 		if (!sub)
 			goto out;
 		inf->subscriber = sub;
@@ -115,39 +117,49 @@ void zmq_receiver_step(ubx_block_t *b)
 void* receiverThread(void *arg) {
     ubx_block_t *b = (ubx_block_t *) arg;
     struct zmq_receiver_info *inf = (struct zmq_receiver_info*) b->private_data;
-    std::cout << " receiverThread started." << std::endl;
+    std::cout << "zmq_receiver: thread started." << std::endl;
 
     /* Receiver loop */
     while(true) {
-    	//inf->subscriber->recv(&update);
-    	zmsg_t *update = zsock_recv (inf->subscriber);
-	assert (update);
-	std::cout << "zmq_receiver: Received " << zmsg_size(update) << " frames and " << zmsg_content_size(update) << " bytes from ?" << std::endl;
-    	if (zmsg_size(update) < 1) {
-    		std::cout << "did not recv()" << std::endl;
-    		break;
-    	}
+	printf("Waiting for frame\n");
+        zframe_t *frame = zframe_recv (inf->subscriber);
+        printf("Received frame\n");
+        zframe_print (frame, NULL);
+        zframe_destroy(&frame);
+    	
+
+//inf->subscriber->recv(&update);
+//	std::cout << "zmq_receiver: Waiting for input..." << std::endl;
+//	bool is_sock = zsock_is(inf->subscriber);
+//	std::cout << "zmq_receiver: subscriber socket ok? " << is_sock << std::endl;
+  //  	zmsg_t *update = zsock_recv (inf->subscriber);
+//	assert (update);
+//	std::cout << "zmq_receiver: Received " << zmsg_size(update) << " frames and " << zmsg_content_size(update) << " bytes from ?" << std::endl;
+  //  	if (zmsg_size(update) < 1) {
+    //		std::cout << "did not recv()" << std::endl;
+    //		break;
+    //	}
 
 
     	// move to step function?
-	char *body = zmsg_popstr (update);
-	std::string data;
-	while(body != NULL) {
-	  	data += body;
-		body = zmsg_popstr (update);
-	}
-        ubx_type_t* type =  ubx_type_get(b->ni, "unsigned char");
-	ubx_data_t msg;
-	msg.data = (void *)data.c_str();
-	msg.len = data.size();
-	msg.type = type;
+//	char *body = zmsg_popstr (update);
+//	std::string data;
+//	while(body != NULL) {
+//	  	data += body;
+//		body = zmsg_popstr (update);
+//	}
+  //      ubx_type_t* type =  ubx_type_get(b->ni, "unsigned char");
+//	ubx_data_t msg;
+//	msg.data = (void *)data.c_str();
+//	msg.len = data.size();
+//	msg.type = type;
 
 	//hexdump((unsigned char *)msg.data, msg.len, 16);
-	__port_write(inf->ports.zmq_in, &msg);
+//	__port_write(inf->ports.zmq_in, &msg);
 		
 	/* Inform potential observers ? */
 
-	zmsg_destroy (&update);
+//	zmsg_destroy (&update);
     }
 
     /* Clean up */
