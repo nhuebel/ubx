@@ -38,7 +38,8 @@ int zmq_receiver_init(ubx_block_t *b)
         struct zmq_receiver_info *inf;
         unsigned int tmplen;
         char *connection_spec_str;
-        std::string connection_spec;
+	
+	// CZMQ socket for subscriber
 	zsock_t* sub;
         /* allocate memory for the block local state */
         if ((inf = (struct zmq_receiver_info*)calloc(1, sizeof(struct zmq_receiver_info)))==NULL) {
@@ -49,30 +50,17 @@ int zmq_receiver_init(ubx_block_t *b)
         b->private_data=inf;
         update_port_cache(b, &inf->ports);
 
-        //try {
+        connection_spec_str = (char*) ubx_config_get_data_ptr(b, "connection_spec", &tmplen);
+	printf("ZMQ connection configuration for block %s is %s\n", b->name, connection_spec_str);
 
-        	//inf->context = new zmq::context_t(1);
-        	//inf->subscriber = new zmq::socket_t(*inf->context, ZMQ_SUB);
+	// create subscriber socket and subscribe to all messages
+	sub = zsock_new_sub(connection_spec_str, "");
+	zsock_set_subscribe(sub, "");
 
-        	connection_spec_str = (char*) ubx_config_get_data_ptr(b, "connection_spec", &tmplen);
-			connection_spec = std::string(connection_spec_str);
-			std::cout << "ZMQ connection configuration for block " << b->name << " is " << connection_spec << std::endl;
-
-        	//inf->subscriber->connect(connection_spec_str);
-        	//inf->subscriber->setsockopt(ZMQ_SUBSCRIBE, "1", 0); // message filter options
-
-		sub = zsock_new_sub(connection_spec_str, "");
-		zsock_set_subscribe(sub, "");
-
-		if (!sub)
-			goto out;
-		inf->subscriber = sub;
-	//	} catch (std::exception e) {
-	//		std::cout << e.what() << " : " << zmq_strerror (errno) << std::endl;
-
-	//		goto out;
-	//	}
-
+	if (!sub)
+		goto out;
+	// add pointer to subscriber to private data
+	inf->subscriber = sub;
 
         ret=0;
 out:
@@ -100,9 +88,9 @@ void zmq_receiver_stop(ubx_block_t *b)
 /* cleanup */
 void zmq_receiver_cleanup(ubx_block_t *b)
 {
-		struct zmq_receiver_info *inf = (struct zmq_receiver_info*) b->private_data;
-		//delete inf->subscriber;
-		zsock_destroy(&inf->subscriber);
+	struct zmq_receiver_info *inf = (struct zmq_receiver_info*) b->private_data;
+	// clean up subscriber socket
+	zsock_destroy(&inf->subscriber);
         free(b->private_data);
 }
 
@@ -121,45 +109,25 @@ void* receiverThread(void *arg) {
 
     /* Receiver loop */
     while(true) {
-	printf("Waiting for frame\n");
+	// try to receive frame	
         zframe_t *frame = zframe_recv (inf->subscriber);
-        printf("Received frame\n");
+	// print out frame data
         zframe_print (frame, NULL);
-        zframe_destroy(&frame);
-    	
-
-//inf->subscriber->recv(&update);
-//	std::cout << "zmq_receiver: Waiting for input..." << std::endl;
-//	bool is_sock = zsock_is(inf->subscriber);
-//	std::cout << "zmq_receiver: subscriber socket ok? " << is_sock << std::endl;
-  //  	zmsg_t *update = zsock_recv (inf->subscriber);
-//	assert (update);
-//	std::cout << "zmq_receiver: Received " << zmsg_size(update) << " frames and " << zmsg_content_size(update) << " bytes from ?" << std::endl;
-  //  	if (zmsg_size(update) < 1) {
-    //		std::cout << "did not recv()" << std::endl;
-    //		break;
-    //	}
-
-
+        
     	// move to step function?
-//	char *body = zmsg_popstr (update);
-//	std::string data;
-//	while(body != NULL) {
-//	  	data += body;
-//		body = zmsg_popstr (update);
-//	}
-  //      ubx_type_t* type =  ubx_type_get(b->ni, "unsigned char");
-//	ubx_data_t msg;
-//	msg.data = (void *)data.c_str();
-//	msg.len = data.size();
-//	msg.type = type;
+        ubx_type_t* type =  ubx_type_get(b->ni, "unsigned char");
+	ubx_data_t msg;
+	msg.data = (void *)zframe_data(frame);
+	msg.len = zframe_size(frame);
+	msg.type = type;
 
-	//hexdump((unsigned char *)msg.data, msg.len, 16);
-//	__port_write(inf->ports.zmq_in, &msg);
+ 	//hexdump((unsigned char *)msg.data, msg.len, 16);
+	__port_write(inf->ports.zmq_in, &msg);
 		
 	/* Inform potential observers ? */
 
-//	zmsg_destroy (&update);
+	// clean up temporary frame object
+	zframe_destroy (&frame);
     }
 
     /* Clean up */
