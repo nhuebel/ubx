@@ -1,9 +1,5 @@
 #include "zmq_receiver.hpp"
 
-/* Generic includes */
-#include <iostream>
-#include <pthread.h>
-
 /* ZMQ includes */
 #include <czmq.h>
 
@@ -110,7 +106,7 @@ receiver_actor (zsock_t *pipe, void *args)
     // initialization
     ubx_block_t *b = (ubx_block_t *) args;
     struct zmq_receiver_info *inf = (struct zmq_receiver_info*) b->private_data;
-    std::cout << "zmq_receiver: actor started." << std::endl;
+    printf("zmq_receiver: actor started.\n");
     // send signal on pipe socket to acknowledge initialisation
     zsock_signal (pipe, 0);
 
