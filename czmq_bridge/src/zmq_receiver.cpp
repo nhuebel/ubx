@@ -11,8 +11,7 @@
 UBX_MODULE_LICENSE_SPDX(BSD-3-Clause)
 
 
-void* receiverThread(void *arg);
-
+static void receiver_actor(zsock_t *pipe, void *args);
 /* define a structure for holding the block local state. By assigning an
  * instance of this struct to the block private_data pointer (see init), this
  * information becomes accessible within the hook functions.
@@ -23,8 +22,8 @@ struct zmq_receiver_info
 	// ZMQ subscriber
 	zsock_t* subscriber;
 
-	// Thread that does the work
-	pthread_t workerThread;
+        // actor running in separate thread to receive the messages
+	zactor_t* actor;
 
         /* this is to have fast access to ports for reading and writing, without
          * needing a hash table lookup */
@@ -71,9 +70,10 @@ out:
 int zmq_receiver_start(ubx_block_t *b)
 {
         struct zmq_receiver_info *inf = (struct zmq_receiver_info*) b->private_data;
-
-	/* The worker thread handles all incoming data */
-	pthread_create(&inf->workerThread, NULL, receiverThread, b);
+	
+	// incoming data is handled by the actor thread
+	zactor_t* actor = zactor_new (receiver_actor, b);
+	inf->actor = actor;
 
         int ret = 0;
         return ret;
@@ -91,6 +91,8 @@ void zmq_receiver_cleanup(ubx_block_t *b)
 	struct zmq_receiver_info *inf = (struct zmq_receiver_info*) b->private_data;
 	// clean up subscriber socket
 	zsock_destroy(&inf->subscriber);
+	// clean up actor thread
+	zactor_destroy(&inf->actor);
         free(b->private_data);
 }
 
@@ -102,35 +104,45 @@ void zmq_receiver_step(ubx_block_t *b)
 
 }
 
-void* receiverThread(void *arg) {
-    ubx_block_t *b = (ubx_block_t *) arg;
+static void
+receiver_actor (zsock_t *pipe, void *args)
+{
+    // initialization
+    ubx_block_t *b = (ubx_block_t *) args;
     struct zmq_receiver_info *inf = (struct zmq_receiver_info*) b->private_data;
-    std::cout << "zmq_receiver: thread started." << std::endl;
+    std::cout << "zmq_receiver: actor started." << std::endl;
+    // send signal on pipe socket to acknowledge initialisation
+    zsock_signal (pipe, 0);
 
-    /* Receiver loop */
-    while(true) {
-	// try to receive frame	
+    bool terminated = false;
+    while (!terminated) {
+        //zmsg_t *msg = zmsg_recv (pipe);
+        //if (!msg)
+        //    break;              //  Interrupted
+        //char *command = zmsg_popstr (msg);
+        //if (streq (command, "$TERM"))
+        //    terminated = true;
+        //free (command);
+        //zmsg_destroy (&msg);
+
+        // try to receive frame 
         zframe_t *frame = zframe_recv (inf->subscriber);
-	// print out frame data
+        // print out frame data
         zframe_print (frame, NULL);
-        
-    	// move to step function?
+
+        // move to step function?
         ubx_type_t* type =  ubx_type_get(b->ni, "unsigned char");
-	ubx_data_t msg;
-	msg.data = (void *)zframe_data(frame);
-	msg.len = zframe_size(frame);
-	msg.type = type;
+        ubx_data_t msg;
+        msg.data = (void *)zframe_data(frame);
+        msg.len = zframe_size(frame);
+        msg.type = type;
 
- 	//hexdump((unsigned char *)msg.data, msg.len, 16);
-	__port_write(inf->ports.zmq_in, &msg);
-		
-	/* Inform potential observers ? */
+        //hexdump((unsigned char *)msg.data, msg.len, 16);
+        __port_write(inf->ports.zmq_in, &msg);
 
-	// clean up temporary frame object
-	zframe_destroy (&frame);
+        /* Inform potential observers ? */
+
+        // clean up temporary frame object
+        zframe_destroy (&frame);
     }
-
-    /* Clean up */
-    return 0;
-
 }
