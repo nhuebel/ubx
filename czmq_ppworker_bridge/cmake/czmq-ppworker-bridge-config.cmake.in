@@ -1,0 +1,18 @@
+# - Config file for the czmq_ppworker_bridge package
+# It defines the following variables
+#  CZMQ_PPWORKER_BRIDGE_TYPES_INCLUDE_DIRS - include directories for czmq_ppworker_bridge_types
+#  CZMQ_PPWORKER_BRIDGE_TYPES_LIBRARIES    - libraries to link against
+ 
+# Compute paths
+#get_filename_component(CZMQ_PPWORKER_BRIDGE_TYPES_CMAKE_DIR "${CZMQ_PPWORKER_BRIDGE_TYPES_CMAKE_DIR}" PATH)
+set(CZMQ_PPWORKER_BRIDGE_INCLUDE_DIRS "@CONF_INCLUDE_DIRS@")
+set(CZMQ_PPWORKER_BRIDGE_TYPES_CMAKE_DIR "@CONF_CMAKE_DIR@")
+
+
+# Our library dependencies (contains definitions for IMPORTED targets)
+if(NOT TARGET czmq_ppworker_bridge AND NOT CZMQ_PPWORKER_BRIDGE_TYPES_BINARY_DIR)
+  include("${CZMQ_PPWORKER_BRIDGE_TYPES_CMAKE_DIR}/czmq-ppworker-bridge-types-targets.cmake")
+endif()
+ 
+# These are IMPORTED targets created by czmq-ppworker-bridge-types-targets.cmake
+set(CZMQ_PPWORKER_BRIDGE_TYPES_LIBRARIES czmq_ppworker_bridge)

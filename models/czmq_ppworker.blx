@@ -1,0 +1,18 @@
+return block
+{
+      name="czmq_ppworker",
+      meta_data="worker process in Paranoid Pirate Pattern, bridging CZMQ with ubx",
+      port_cache=true,
+
+      configurations= {
+	{ name="connection_spec", type_name = "char", doc="Connection string that defines the ZMQ type of connection. E.g. tcp://localhost:11411"},
+      },
+
+      ports = {
+	 { name="zmq_in", out_type_name="unsigned char", doc="task received by server queue as ZMQ message." },
+      },
+      
+      operations = { start=true, stop=true, step=true },
+      
+      cpp=false
+}

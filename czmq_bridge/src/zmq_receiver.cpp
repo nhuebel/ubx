@@ -6,7 +6,6 @@
 
 UBX_MODULE_LICENSE_SPDX(BSD-3-Clause)
 
-
 static void receiver_actor(zsock_t *pipe, void *args);
 /* define a structure for holding the block local state. By assigning an
  * instance of this struct to the block private_data pointer (see init), this
@@ -68,7 +67,7 @@ int zmq_receiver_start(ubx_block_t *b)
         struct zmq_receiver_info *inf = (struct zmq_receiver_info*) b->private_data;
 	
 	// incoming data is handled by the actor thread
-	zactor_t* actor = zactor_new (receiver_actor, b);
+        zactor_t* actor = zactor_new (receiver_actor, b);
 	inf->actor = actor;
 
         int ret = 0;
@@ -100,29 +99,13 @@ void zmq_receiver_step(ubx_block_t *b)
 
 }
 
-static void
-receiver_actor (zsock_t *pipe, void *args)
-{
-    // initialization
-    ubx_block_t *b = (ubx_block_t *) args;
-    struct zmq_receiver_info *inf = (struct zmq_receiver_info*) b->private_data;
-    printf("zmq_receiver: actor started.\n");
-    // send signal on pipe socket to acknowledge initialisation
-    zsock_signal (pipe, 0);
+int handle_event(zloop_t *loop, zsock_t *reader, void *args) {
+         // initialization
+        ubx_block_t *b = (ubx_block_t *) args;
+        struct zmq_receiver_info *inf = (struct zmq_receiver_info*) b->private_data;
+        printf("zmq_receiver: data available.\n");
 
-    bool terminated = false;
-    while (!terminated) {
-        //zmsg_t *msg = zmsg_recv (pipe);
-        //if (!msg)
-        //    break;              //  Interrupted
-        //char *command = zmsg_popstr (msg);
-        //if (streq (command, "$TERM"))
-        //    terminated = true;
-        //free (command);
-        //zmsg_destroy (&msg);
-
-        // try to receive frame 
-        zframe_t *frame = zframe_recv (inf->subscriber);
+        zframe_t *frame = zframe_recv (reader);
         // print out frame data
         zframe_print (frame, NULL);
 
@@ -140,5 +123,25 @@ receiver_actor (zsock_t *pipe, void *args)
 
         // clean up temporary frame object
         zframe_destroy (&frame);
-    }
+
+        return 1;
+}
+
+static void
+receiver_actor (zsock_t *pipe, void *args)
+{
+    // initialization
+    ubx_block_t *b = (ubx_block_t *) args;
+    struct zmq_receiver_info *inf = (struct zmq_receiver_info*) b->private_data;
+    printf("zmq_receiver: actor started.\n");
+    // send signal on pipe socket to acknowledge initialisation
+    zsock_signal (pipe, 0);
+
+    zloop_t *loop = zloop_new ();
+    assert (loop);
+    int rc = zloop_reader (loop, inf->subscriber, handle_event, args);
+    assert (rc == 0);
+    zloop_start (loop);
+
+    zloop_destroy (&loop);
 }
