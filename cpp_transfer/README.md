@@ -1,4 +1,4 @@
-Example: C++ data in ubx
+Tutorial: How to use C++ data in ubx
 ========================
 
 Prerequisites
@@ -8,12 +8,11 @@ Prerequisites
 ```sh
 ~/workspace$ sudo apt-get install luajit, libluajit-5.1-dev, clang
 ```
-### Install ubx dev branch and follow instructions at https://github.com/haianos/microblx:
+### Install ubx and follow instructions at http://ubxteam.github.io/quickstart/
 
 ```sh
-~/workspace$ git clone https://github.com/haianos/microblx.git
+~/workspace$ git clone https://github.com/UbxTeam/microblx.git
 ~/workspace$ cd microblx
-~/workspace/microblx$ git checkout dev
 ```
 
 ### Install ubx cmake:
@@ -151,7 +150,7 @@ In our example, two files have been generated:
 
 ```sh
 ~/workspace/microblx_cmake$ cd ../cpp_transfer/types/
-jphilips@CIB-11-009:~/workspace/cpp_transfer/types$ ls
+~/workspace/cpp_transfer/types$ ls
 cpp_data.h  cpp_transfer_types.c
 ```
 The cpp_data.h file defines the model implementation of the type you want to share between ubx blocks, while the cpp_transfer_types.c file defines ubx functions to register all the types in this directory. The former still requires some editing, while the latter should be fine in most cases.
@@ -174,7 +173,7 @@ struct cpp_data {
 In this very basic example, we will only edit the step function of the sender and receiver block and set the license at the top
 
 ```sh
-UBX_MODULE_LICENSE_SPDX(GPL-2.0+)
+UBX_MODULE_LICENSE_SPDX(BSD)
 
 ...
 
@@ -199,7 +198,7 @@ In the receiver block we also include iostream
 #include <iostream>
 using namespace std;
 
-UBX_MODULE_LICENSE_SPDX(GPL-2.0+)
+UBX_MODULE_LICENSE_SPDX(BSD)
 
 ...
 

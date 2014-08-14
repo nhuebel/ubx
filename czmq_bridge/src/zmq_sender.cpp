@@ -22,10 +22,10 @@ struct zmq_sender_info
         zsock_t* publisher;
 
         // Data buffer fpr input port
-	unsigned char* buffer;
+        unsigned char* buffer;
 
-	// Length of the buffer
-	unsigned long buffer_length;
+        // Length of the buffer
+        unsigned long buffer_length;
 
         /* this is to have fast access to ports for reading and writing, without
          * needing a hash table lookup */

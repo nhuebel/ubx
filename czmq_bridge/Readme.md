@@ -1,53 +1,63 @@
-Microblx ZeroMQ Bridge
-=========
+Tutorial: How to use the CZMQ-UBX bridge
+========================
 
-Dependencies
------------
+Prerequisites
+-------------
 
-It requires 
-
-* CZMQ (git clone git://github.com/zeromq/czmq)
-* microblocks
-
-
-Installation
---------------
-
-
-* Set up the UBX_ROOT environment variable
+### Install ubx dependencies: luajit, libluajit-5.1-dev, clang++, clang
 ```sh
-export UBX_ROOT=<path-to-microblx>
+~/workspace$ sudo apt-get install luajit, libluajit-5.1-dev, clang
 ```
-* Then, download the source in your favorite directory by typing
+### Install ubx and follow instructions at <http://ubxteam.github.io/quickstart/>
+
 ```sh
-git clone <this-prepository-url.git>
-mkdir build && cd build
-cmake ..
-make
+~/workspace$ git clone https://github.com/UbxTeam/microblx.git
+~/workspace$ cd microblx
 ```
 
-Quickstart
------------
+### Install ubx cmake:
 
+```sh
+~/workspace$ git clone https://github.com/haianos/microblx_cmake.git
 ```
-cd <path_to_ubx_zmq_bridge>
-./run_test.sh
+### Set some environment variables and run the env.sh script (e.g. in your .bashrc):
+
+```sh
+export UBX_ROOT=~/workspace/microblx
+export UBX_MODULES=~/workspace/install/lib/microblx
+source $UBX_ROOT/env.sh
 ```
 
+### Install CZMQ:
 
+```sh
+~/workspace$ git clone git://github.com/zeromq/czmq
+~/workspace$ cd czmq
+~/workspace/czmq$ ./autogen.sh
+~/workspace/czmq$ ./configure
+~/workspace/czmq$ make
+~/workspace/czmq$ sudo make install
+```
 
-Use the web interface (http://localhost:8888/) to inspect and start the example.
-
-
-Design
---------
-
-TBD
-
-TODO
+Building & running the CZMQ bridge example
 ---
 
+If you quickly want to get started, you can build the code and run the example configuration in the root directory.
+This will connect at one side a random number generator block with the sender block and at the other side the receiver block with
+a hexdump block. Sender and receiver are connected through the configurable CZMQ PUB-SUB sockets.
 
+### Clone the ubx repository:
+```sh
+~/workspace$ git clone https://github.com/maccradar/ubx.git
+~/workspace$ cd ubx/czmq_bridge
+~/workspace/ubx/czmq_bridge$ mkdir build
+~/workspace/ubx/czmq_bridge$ cd build
+~/workspace/ubx/czmq_bridge/build$ cmake ..
+~/workspace/ubx/czmq_bridge/build$ make
+~/workspace$ cd ..
+~/workspace$ ./run_czmq_bridge.sh
+```
+Use the web interface (http://localhost:8888/) to inspect and start the example.
 
 License
 ---
