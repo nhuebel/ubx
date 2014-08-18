@@ -12,13 +12,28 @@
 #define PPP_READY       "\001"      //  Signals worker is ready
 #define PPP_HEARTBEAT   "\002"      //  Signals worker heartbeat
 
+/* define a structure for holding the block local state. By assigning an
+ * instance of this struct to the block private_data pointer (see init), this
+ * information becomes accessible within the hook functions.
+ */
+struct czmq_ppworker_info
+{
+        /* add custom block local data here */
+
+        // actor running in separate thread to receive the messages
+		zactor_t* actor;
+
+        /* this is to have fast access to ports for reading and writing, without
+         * needing a hash table lookup */
+        struct czmq_ppworker_port_cache ports;
+};
+
 //  Helper function that returns a new configured socket
 //  connected to the Paranoid Pirate queue
 
-static void *
-s_worker_socket (zctx_t *ctx) {
-    void *worker = zsocket_new (ctx, ZMQ_DEALER);
-    zsocket_connect (worker, "tcp://localhost:5556");
+static zsock_t *
+s_worker_socket () {
+	zsock_t *worker = zsock_new_dealer("tcp://localhost:5556");
 
     //  Tell queue we're ready for work
     printf ("I: worker ready\n");
@@ -35,9 +50,9 @@ s_worker_socket (zctx_t *ctx) {
 //  died, and vice versa:
 static void ppworker_actor(zsock_t *pipe, void *args)
 {
-
-    zctx_t *ctx = zctx_new ();
-    void *worker = s_worker_socket (ctx);
+	ubx_block_t *b = (ubx_block_t *) args;
+	struct czmq_ppworker_info *inf = (struct czmq_ppworker_info*) b->private_data;
+    zsock_t *worker = s_worker_socket ();
 
     //  If liveness hits zero, queue is considered disconnected
     size_t liveness = HEARTBEAT_LIVENESS;
@@ -47,14 +62,13 @@ static void ppworker_actor(zsock_t *pipe, void *args)
     uint64_t heartbeat_at = zclock_time () + HEARTBEAT_INTERVAL;
 
     srandom ((unsigned) time (NULL));
-    int cycles = 0;
 
     printf("ppworker: actor started.\n");
     // send signal on pipe socket to acknowledge initialisation
     zsock_signal (pipe, 0);
 
     while (true) {
-        zmq_pollitem_t items [] = { { worker,  0, ZMQ_POLLIN, 0 } };
+        zmq_pollitem_t items [] = { { zsock_resolve(worker),  0, ZMQ_POLLIN, 0 } };
         int rc = zmq_poll (items, 1, HEARTBEAT_INTERVAL * ZMQ_POLL_MSEC);
         if (rc == -1)
             break;              //  Interrupted
@@ -67,31 +81,20 @@ static void ppworker_actor(zsock_t *pipe, void *args)
             if (!msg)
                 break;          //  Interrupted
 
-            //  .split simulating problems
-            //  To test the robustness of the queue implementation we 
-            //  simulate various typical problems, such as the worker
-            //  crashing or running very slowly. We do this after a few
-            //  cycles so that the architecture can get up and running
-            //  first:
             if (zmsg_size (msg) == 3) {
-                cycles++;
-                if (cycles > 3 && randof (5) == 0) {
-                    printf ("I: simulating a crash\n");
-                    zmsg_destroy (&msg);
-                    break;
-                }
-                else
-                if (cycles > 3 && randof (5) == 0) {
-                    printf ("I: simulating CPU overload\n");
-                    sleep (3);
-                    if (zctx_interrupted)
-                        break;
-                }
                 printf ("I: normal reply\n");
- 		zmsg_send (&msg, worker);
+                byte *buffer;
+                size_t buffer_size = zmsg_encode (msg, &buffer);
+                ubx_type_t* type =  ubx_type_get(b->ni, "unsigned char");
+                ubx_data_t umsg;
+                umsg.data = (void *)buffer;
+                umsg.len = buffer_size;
+                umsg.type = type;
+                __port_write(inf->ports.zmq_in, &umsg);
+                zmsg_send (&msg, worker);
                 liveness = HEARTBEAT_LIVENESS;
                 sleep (1);              //  Do some heavy work
-                if (zctx_interrupted)
+                if (zsys_interrupted)
                     break;
             }
             else
@@ -127,8 +130,8 @@ static void ppworker_actor(zsock_t *pipe, void *args)
 
             if (interval < INTERVAL_MAX)
                 interval *= 2;
-            zsocket_destroy (ctx, worker);
-            worker = s_worker_socket (ctx);
+            zsock_destroy(&worker);
+            worker = s_worker_socket ();
             liveness = HEARTBEAT_LIVENESS;
         }
         //  Send heartbeat to queue if it's time
@@ -139,27 +142,10 @@ static void ppworker_actor(zsock_t *pipe, void *args)
             zframe_send (&frame, worker, 0);
         }
     }
-    zctx_destroy (&ctx);
 }
 
 
 
-
-/* define a structure for holding the block local state. By assigning an
- * instance of this struct to the block private_data pointer (see init), this
- * information becomes accessible within the hook functions.
- */
-struct czmq_ppworker_info
-{
-        /* add custom block local data here */
- 
-        // actor running in separate thread to receive the messages
-	zactor_t* actor;
- 
-        /* this is to have fast access to ports for reading and writing, without
-         * needing a hash table lookup */
-        struct czmq_ppworker_port_cache ports;
-};
 
 /* init */
 int czmq_ppworker_init(ubx_block_t *b)
@@ -187,8 +173,8 @@ int czmq_ppworker_start(ubx_block_t *b)
         int ret = 0;
 	// incoming data is handled by the actor thread
         zactor_t* actor = zactor_new (ppworker_actor, b);
-	assert(actor);	
-	inf->actor = actor;
+        assert(actor);
+        inf->actor = actor;
         return ret;
 }
 
