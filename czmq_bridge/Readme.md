@@ -8,14 +8,14 @@ This bridge enables you to link a microblx application to other (possibly remote
 In this tutorial PUB-SUB sockets are used to demonstrate the communcation between two microblx applications (a publisher and a subscriber).
 Configuration parameters allow you to change the protocol (e.g. tcp://, ipc://, pgm://, inproc://) and the address and port, if relevant.
 
-More information on CZMQ and ØMQ itself can be found at http://zguide.zeromq.org/page:all and http://czmq.zeromq.org/manual:_start 
+More information on CZMQ and ØMQ itself can be found [here](http://zguide.zeromq.org/page:all) and [here](http://czmq.zeromq.org/manual:_start). 
 Prerequisites
 -------------
 ### Install ubx dependencies: luajit, libluajit-5.1-dev, clang++, clang
 ```sh
 ~/workspace$ sudo apt-get install luajit, libluajit-5.1-dev, clang
 ```
-### Install ubx and follow instructions at <http://ubxteam.github.io/quickstart/>
+### Install ubx and follow instructions in the [quickstart](http://ubxteam.github.io/quickstart/).
 
 ```sh
 ~/workspace$ git clone https://github.com/UbxTeam/microblx.git
