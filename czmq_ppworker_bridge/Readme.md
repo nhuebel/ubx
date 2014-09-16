@@ -97,6 +97,27 @@ The behaviour of the client process is as follows:
 ```
 Use the web interface (http://localhost:8888/) to inspect and start the example.
 
+### Note:
+If executing the `run_czmq_ppworker_bridge.sh` produces and undefined symbol error, check that you link the CZMQ library and **NOT** the ZMQ library:
+```sh
+~/workspace/ubx/czmq_ppworker_bridge/build$ ccmake ..
+
+```
+This should produce something that looks similar to:
+```sh
+ CMAKE_BUILD_TYPE                                                                                                 
+ CMAKE_INSTALL_PREFIX             /home/nhuebel/projects/microblx/microblx/install                                    
+ INSTALL_BIN_APPS_DIR             bin                                                                                 
+ INSTALL_CMAKE_DIR                share/ubx/cmake                                                                     
+ INSTALL_INCLUDE_DIR              include/ubx                                                                         
+ INSTALL_LIB_BLOCKS_DIR           lib/ubx/blocks                                                                      
+ INSTALL_LIB_TYPES_DIR            lib/ubx/types                                                                       
+ UBX_LIBRARY                      /home/nhuebel/projects/microblx/microblx/src/libubx.so                              
+ ZMQ_INCLUDE_DIR                  /usr/local/include                                                                  
+ ZMQ_LIBRARY                      /usr/local/lib/libczmq.so
+```
+Make sure the last line links to `libczmq.so` and not `libzmq.so`. Otherwise, change it (press c) and and generate the changed cmale options (press g).
+
 ### Reliable request reply with heartbeating in CZMQ
 ![Paranoid Pirate Pattern](https://github.com/imatix/zguide/raw/master/images/fig49.png "Paranoid Pirate Pattern")
 
