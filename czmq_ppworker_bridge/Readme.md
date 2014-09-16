@@ -33,6 +33,12 @@ export UBX_MODULES=~/workspace/install/lib/microblx
 source $UBX_ROOT/env.sh
 ```
 
+### Install automake:
+for being able to run the autogen and configure shell scripts
+```sh
+~/workspace$ apt-get install automake
+```
+
 ### Install CZMQ:
 
 ```sh
