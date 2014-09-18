@@ -33,6 +33,23 @@ export UBX_MODULES=~/workspace/install/lib/microblx
 source $UBX_ROOT/env.sh
 ```
 
+### Install automake:
+for being able to run the autogen and configure shell scripts
+```sh
+~/workspace$ apt-get install automake
+```
+
+### Install the the ZMQ core libraries:
+If you encounter errors, please refer to the install instructions of [CZMQ](https://github.com/zeromq/czmq).
+```sh
+~/workspace$ git clone git://github.com/zeromq/libzmq.git
+~/workspace$ cd libzmq
+~/workspace$ ./autogen.sh
+~/workspace$ ./configure && make check
+~/workspace$ sudo make install
+~/workspace$ sudo ldconfig
+```
+
 ### Install CZMQ:
 
 ```sh
@@ -53,13 +70,13 @@ Running the script, as shown below, will start a single worker process which tri
 The behaviour of the worker process is as follows:
 - __worker__ sends _ready_ signal to __queue__
 - __worker__ sends _heartbeat_ signal to __queue__
-- __worker__ checks if it has received a _heartbeat_ or a _request_ from _queue_, if tries 2 more times with another _heartbeat_ signal
-- if __worker__ still has not received any message from __queue__ it destroys the current sockets and tries to reconnect of an increasing time delay (exponential backoff)
+- __worker__ checks if it has received a _heartbeat_ or a _request_ from _queue_. If not, it tries 2 more times with another _heartbeat_ signal
+- if __worker__ still has not received any message from __queue__ it destroys the current sockets and tries to reconnect with an increasing time delay (exponential backoff)
 
 The behaviour of the server queue is as follows:
 - __server__ waits for requests from __client__
 - __server__ sends heartbeats to alive __workers__ (of which it received a _ready_ or _heartbeat_ signal)
-- __server__ sends keeps track of alive __workers__ and dispatches requests from __clients__ to __workers__ (round robin)
+- __server__ keeps track of alive __workers__ and dispatches requests from __clients__ to __workers__ (round robin)
 
 The behaviour of the client process is as follows:
 - __client__ connects to __server__
@@ -70,15 +87,36 @@ The behaviour of the client process is as follows:
 ### Instructions:
 ```sh
 ~/workspace$ git clone https://github.com/maccradar/ubx.git
-~/workspace$ cd ubx/czmq_bridge
-~/workspace/ubx/czmq_bridge$ mkdir build
-~/workspace/ubx/czmq_bridge$ cd build
-~/workspace/ubx/czmq_bridge/build$ cmake ..
-~/workspace/ubx/czmq_bridge/build$ make
+~/workspace$ cd ubx/czmq_ppworker_bridge
+~/workspace/ubx/czmq_ppworker_bridge$ mkdir build
+~/workspace/ubx/czmq_ppworker_bridge$ cd build
+~/workspace/ubx/czmq_ppworker_bridge/build$ cmake ..
+~/workspace/ubx/czmq_ppworker_bridge/build$ make
 ~/workspace$ cd ..
 ~/workspace$ ./run_czmq_ppworker_bridge.sh
 ```
 Use the web interface (http://localhost:8888/) to inspect and start the example.
+
+### Note:
+If executing the `run_czmq_ppworker_bridge.sh` produces and undefined symbol error, check that you link the CZMQ library and **NOT** the ZMQ library:
+```sh
+~/workspace/ubx/czmq_ppworker_bridge/build$ ccmake ..
+
+```
+This should produce something that looks similar to:
+```sh
+ CMAKE_BUILD_TYPE 
+ CMAKE_INSTALL_PREFIX             /home/nhuebel/projects/microblx/microblx/install 
+ INSTALL_BIN_APPS_DIR             bin 
+ INSTALL_CMAKE_DIR                share/ubx/cmake 
+ INSTALL_INCLUDE_DIR              include/ubx 
+ INSTALL_LIB_BLOCKS_DIR           lib/ubx/blocks
+ INSTALL_LIB_TYPES_DIR            lib/ubx/types 
+ UBX_LIBRARY                      /home/nhuebel/projects/microblx/microblx/src/libubx.so 
+ ZMQ_INCLUDE_DIR                  /usr/local/include 
+ ZMQ_LIBRARY                      /usr/local/lib/libczmq.so
+```
+Make sure the last line links to `libczmq.so` and not `libzmq.so`. Otherwise, change it (press c) and and generate the changed cmake options (press g).
 
 ### Reliable request reply with heartbeating in CZMQ
 ![Paranoid Pirate Pattern](https://github.com/imatix/zguide/raw/master/images/fig49.png "Paranoid Pirate Pattern")
