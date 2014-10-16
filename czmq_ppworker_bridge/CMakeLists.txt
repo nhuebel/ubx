@@ -12,7 +12,7 @@ set(INSTALL_BIN_APPS_DIR bin CACHE PATH "Installation directory for bin")
 set(INSTALL_INCLUDE_DIR include/ubx CACHE PATH "Installation directory for header files (types)")
 set(INSTALL_CMAKE_DIR  share/ubx/cmake CACHE PATH  "Installation directory for CMake files") # default ${DEF_INSTALL_CMAKE_DIR}
 
-FIND_PACKAGE(ZMQ REQUIRED)
+FIND_PACKAGE(CZMQ REQUIRED)
 
 # Make relative paths absolute
 foreach(p LIB_TYPES LIB_BLOCKS BIN INCLUDE CMAKE)
@@ -53,7 +53,7 @@ find_package(Ubx REQUIRED)
 
 include_directories(
   ${UBX_INCLUDE_DIR}
-  ${ZMQ_INCLUDE_DIRS}
+  ${CZMQ_INCLUDE_DIRS}
 )
 
 # Compile library czmqppworkerlib
@@ -61,7 +61,7 @@ add_library(czmqppworkerlib SHARED src/czmq_ppworker.c
 modules/czmqppworkerlib_module.c
 )
 set_target_properties(czmqppworkerlib PROPERTIES PREFIX "")
-target_link_libraries(czmqppworkerlib ${UBX_LIBRARIES} ${ZMQ_LIBRARIES})
+target_link_libraries(czmqppworkerlib ${UBX_LIBRARIES} ${CZMQ_LIBRARIES})
 
 # Install czmqppworkerlib
 install(TARGETS czmqppworkerlib DESTINATION ${INSTALL_LIB_BLOCKS_DIR} EXPORT czmqppworkerlib-block)
