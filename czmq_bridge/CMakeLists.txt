@@ -11,6 +11,7 @@ set(INSTALL_LIB_BLOCKS_DIR lib/ubx/blocks CACHE PATH "Installation directory for
 set(INSTALL_INCLUDE_DIR include/ubx CACHE PATH "Installation directory for header files (types)")
 set(INSTALL_CMAKE_DIR  share/ubx/cmake CACHE PATH  "Installation directory for CMake files") # default ${DEF_INSTALL_CMAKE_DIR}
 
+FIND_PACKAGE(ZMQ REQUIRED) 
 FIND_PACKAGE(CZMQ REQUIRED)
 
 # Make relative paths absolute
@@ -52,6 +53,7 @@ find_package(Microblx REQUIRED)
 
 include_directories(
   ${UBX_INCLUDE_DIR}
+  ${ZMQ_INCLUDE_DIRS} 
   ${CZMQ_INCLUDE_DIRS}
 )
 
