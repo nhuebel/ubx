@@ -2,9 +2,11 @@
 
 /* ZMQ includes */
 #include <czmq.h>
-
+#include <iostream>
 
 UBX_MODULE_LICENSE_SPDX(BSD-3-Clause)
+
+const unsigned int DEFAULT_BUFFER_LENGTH = 20000;
 
 static void receiver_actor(zsock_t *pipe, void *args);
 /* define a structure for holding the block local state. By assigning an
@@ -14,11 +16,22 @@ static void receiver_actor(zsock_t *pipe, void *args);
 struct zmq_server_info
 {
 	/* add custom block local data here */
-	// ZMQ subscriber
-	zsock_t* subscriber;
+	// ZMQ server
+	zctx_t *ctx;
+
+	void *server; //
+
+	zsock_t* server_socket;
 
 	// actor running in separate thread to receive the messages
 	zactor_t* actor;
+
+
+    // Data buffer fpr input port
+    unsigned char* buffer;
+
+    // Length of the buffer
+    unsigned long buffer_length;
 
 	/* this is to have fast access to ports for reading and writing, without
 	 * needing a hash table lookup */
@@ -34,31 +47,40 @@ int zmq_server_init(ubx_block_t *b)
 	char *connection_spec_str;
 
 	// CZMQ socket for subscriber
-	zsock_t* sub;
+	zsock_t* server_socket;
 	/* allocate memory for the block local state */
 	if ((inf = (struct zmq_server_info*)calloc(1, sizeof(struct zmq_server_info)))==NULL) {
 		ERR("zmq_server: failed to alloc memory");
 		ret=EOUTOFMEM;
-		goto out;
+		return ret;
 	}
 	b->private_data=inf;
 	update_port_cache(b, &inf->ports);
 
+    inf->buffer_length = DEFAULT_BUFFER_LENGTH; //TODO read from config
+    inf->buffer = new unsigned char [inf->buffer_length];
+
 	connection_spec_str = (char*) ubx_config_get_data_ptr(b, "connection_spec", &tmplen);
 	printf("ZMQ connection configuration for block %s is %s\n", b->name, connection_spec_str);
 
+    //  Create context
+    inf->ctx = zctx_new ();
+
+    //  Create and bind server socket
+//    void* server = zsocket_new (inf->ctx, ZMQ_REP);
+//    zsocket_bind (server, "tcp://%s:%d", "127.0.0.0", 22422);
+
 	// create subscriber socket and subscribe to all messages
-	sub = zsock_new_sub(connection_spec_str, "");
-	zsock_set_subscribe(sub, "");
+	server_socket = zsock_new_rep(connection_spec_str);
+//	zsock_set_subscribe(sub, "");
 
-	if (!sub)
-		goto out;
+	if (!server_socket) {
+		return ret;
+	}
 	// add pointer to subscriber to private data
-	inf->subscriber = sub;
+	inf->server_socket = server_socket;
 
-	ret=0;
-	out:
-	return ret;
+	return 0;
 }
 
 /* start */
@@ -84,8 +106,8 @@ void zmq_server_stop(ubx_block_t *b)
 void zmq_server_cleanup(ubx_block_t *b)
 {
 	struct zmq_server_info *inf = (struct zmq_server_info*) b->private_data;
-	// clean up subscriber socket
-	zsock_destroy(&inf->subscriber);
+	// clean up context socket
+	zctx_destroy (&inf->ctx);
 	// clean up actor thread
 	zactor_destroy(&inf->actor);
 	free(b->private_data);
@@ -95,7 +117,36 @@ void zmq_server_cleanup(ubx_block_t *b)
 void zmq_server_step(ubx_block_t *b)
 {
 
-        //struct zmq_server_info *inf = (struct zmq_server_info*) b->private_data;
+    struct zmq_server_info *inf = (struct zmq_server_info*) b->private_data;
+    std::cout << "zmq_server: Processing a port update" << std::endl;
+
+	/* Read data from port */
+	ubx_port_t* port = inf->ports.zmq_rep;
+	assert(port != 0);
+
+	ubx_data_t msg;
+	checktype(port->block->ni, port->in_type, "unsigned char", port->name, 1);
+	msg.type = port->in_type;
+	msg.len = inf->buffer_length;
+	msg.data = inf->buffer;
+
+	std::cout << "zmq_server: Reading from port" << std::endl;
+	int read_bytes = __port_read(port, &msg);
+	if (read_bytes <= 0) {
+		std::cout << "zmq_server: No data recieved from port" << std::endl;
+		return;
+	}
+
+	std::cout << "zmq_server: read bytes = " << read_bytes << std::endl;
+
+	/* Setup ZMQ frame. At this point only single frames are sent. This can be replaced by zmsg_t messages
+        if multi-part messages become necessary*/
+	zframe_t* message = zframe_new(msg.data, read_bytes);
+	std::cout << "Created frame of length " << zframe_size(message) << std::endl;
+
+	/* Send the message */
+	int result = zframe_send(&message, inf->server_socket,0);
+	std::cout << "send message with result " << result << std::endl;
 
 }
 
@@ -139,7 +190,7 @@ receiver_actor (zsock_t *pipe, void *args)
 
     zloop_t *loop = zloop_new ();
     assert (loop);
-    int rc = zloop_reader (loop, inf->subscriber, handle_event, args);
+    int rc = zloop_reader (loop, inf->server_socket, handle_event, args);
     assert (rc == 0);
     zloop_start (loop);
 
