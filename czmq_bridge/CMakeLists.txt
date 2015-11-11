@@ -77,3 +77,13 @@ install(TARGETS zmqreceiverlib DESTINATION ${INSTALL_LIB_BLOCKS_DIR} EXPORT zmqr
 set_property(TARGET zmqreceiverlib PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
 install(EXPORT zmqreceiverlib-block DESTINATION ${INSTALL_CMAKE_DIR})
 
+# Compile library zmqserverlib
+add_library(zmqserverlib SHARED src/zmq_server.cpp )
+set_target_properties(zmqserverlib PROPERTIES PREFIX "")
+target_link_libraries(zmqserverlib ${UBX_LIBRARIES} ${CZMQ_LIBRARIES})
+
+# Install zmqserverlib
+install(TARGETS zmqserverlib DESTINATION ${INSTALL_LIB_BLOCKS_DIR} EXPORT zmqserverlib-block)
+set_property(TARGET zmqserverlib PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
+install(EXPORT zmqserverlib-block DESTINATION ${INSTALL_CMAKE_DIR})
+
