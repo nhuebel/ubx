@@ -5,6 +5,13 @@ local function get_root()
  return os.getenv("UBX_ROOT").."/"
 end
 
+function start_all() 
+  ni:b("req_rep_server"):do_start()
+  ni:b("hexdump1"):do_init()  
+  ni:b("hexdump1"):do_start()   
+  ni:b("bytestreambuffer"):do_start()    
+end
+
 return bd.system
 {
    imports = {
@@ -21,7 +28,8 @@ return bd.system
    blocks = {
       { name="req_rep_server", type="zmq_server" },
       { name="hexdump1", type="hexdump/hexdump" },
-      { name="bytestreambuffer",type="lfds_buffers/cyclic_raw" }
+      { name="bytestreambuffer",type="lfds_buffers/cyclic_raw" },
+      { name="cyclic_io_trigger", type="std_triggers/ptrig" }
    },
    
    connections = {
@@ -33,6 +41,14 @@ return bd.system
    configurations = {
       { name="req_rep_server", config = { connection_spec="tcp://127.0.1:22422" } },	
       { name="bytestreambuffer", config = { element_num=100 , element_size=10000 } },			
+      { name="cyclic_io_trigger", -- Note: on first failure the other blocks are not triggered any more...
+        config = { 
+          period = {sec=0, usec=100000 }, 
+          trig_blocks={ 
+            { b="#req_rep_server", num_steps=1, measure=0 },            
+          } 
+        } 
+      },  
    },
    
 }
