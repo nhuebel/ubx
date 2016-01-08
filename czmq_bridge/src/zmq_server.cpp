@@ -118,7 +118,7 @@ void zmq_server_step(ubx_block_t *b)
 {
 
     struct zmq_server_info *inf = (struct zmq_server_info*) b->private_data;
-    std::cout << "zmq_server: Processing a port update" << std::endl;
+//    std::cout << "zmq_server: Processing a port update" << std::endl;
 
 	/* Read data from port */
 	ubx_port_t* port = inf->ports.zmq_rep;
@@ -130,10 +130,10 @@ void zmq_server_step(ubx_block_t *b)
 	msg.len = inf->buffer_length;
 	msg.data = inf->buffer;
 
-	std::cout << "zmq_server: Reading from port" << std::endl;
+//	std::cout << "zmq_server: Reading from port" << std::endl;
 	int read_bytes = __port_read(port, &msg);
 	if (read_bytes <= 0) {
-		std::cout << "zmq_server: No data recieved from port" << std::endl;
+//		std::cout << "zmq_server: No data recieved from port" << std::endl;
 		return;
 	}
 
