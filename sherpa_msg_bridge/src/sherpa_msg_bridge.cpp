@@ -1,127 +1,92 @@
 #include "sherpa_msg_bridge.hpp"
 
-/* ZMQ includes */
-#include <czmq.h>
 #include <iostream>
 
 UBX_MODULE_LICENSE_SPDX(BSD-3-Clause)
 
 const unsigned int DEFAULT_BUFFER_LENGTH = 20000;
 
-static void receiver_actor(zsock_t *pipe, void *args);
 /* define a structure for holding the block local state. By assigning an
  * instance of this struct to the block private_data pointer (see init), this
  * information becomes accessible within the hook functions.
  */
-struct zmq_server_info
+struct sherpa_msg_info
 {
-	/* add custom block local data here */
-	// ZMQ server
-	zctx_t *ctx;
+  int bridge_direction; // 1 = send; 2 = receive	
 
-	void *server; //
+  // Data buffer fpr input port
+  unsigned char* buffer;
 
-	zsock_t* server_socket;
-
-	// actor running in separate thread to receive the messages
-	zactor_t* actor;
-
-
-    // Data buffer fpr input port
-    unsigned char* buffer;
-
-    // Length of the buffer
-    unsigned long buffer_length;
+  // Length of the buffer
+  unsigned long buffer_length;
 
 	/* this is to have fast access to ports for reading and writing, without
 	 * needing a hash table lookup */
-	struct zmq_server_port_cache ports;
+	struct sherpa_msg_port_cache ports;
 };
 
 /* init */
-int zmq_server_init(ubx_block_t *b)
+int sherpa_msg_init(ubx_block_t *b)
 {
 	int ret = -1;
-	struct zmq_server_info *inf;
-	unsigned int tmplen;
-	char *connection_spec_str;
+	struct sherpa_msg_info *inf;
+//	unsigned int tmplen;
 
-	// CZMQ socket for subscriber
-	zsock_t* server_socket;
-	/* allocate memory for the block local state */
-	if ((inf = (struct zmq_server_info*)calloc(1, sizeof(struct zmq_server_info)))==NULL) {
-		ERR("zmq_server: failed to alloc memory");
-		ret=EOUTOFMEM;
-		return ret;
-	}
+
+  /* allocate memory for the block local state */
+  if ((inf = (struct sherpa_msg_info*)calloc(1, sizeof(struct sherpa_msg_info)))==NULL) {
+          ERR("sherpa_msg: failed to alloc memory");
+          ret=EOUTOFMEM;
+          goto out;
+  }
+
 	b->private_data=inf;
 	update_port_cache(b, &inf->ports);
 
-    inf->buffer_length = DEFAULT_BUFFER_LENGTH; //TODO read from config
-    inf->buffer = new unsigned char [inf->buffer_length];
 
-	connection_spec_str = (char*) ubx_config_get_data_ptr(b, "connection_spec", &tmplen);
-	printf("ZMQ connection configuration for block %s is %s\n", b->name, connection_spec_str);
+  inf->buffer_length = DEFAULT_BUFFER_LENGTH; //TODO read from config
+  inf->buffer = new unsigned char [inf->buffer_length];
 
-    //  Create context
-    inf->ctx = zctx_new ();
+  /* Parameters. E.g. if the breadge reads or writes */
 
-    //  Create and bind server socket
-//    void* server = zsocket_new (inf->ctx, ZMQ_REP);
-//    zsocket_bind (server, "tcp://%s:%d", "127.0.0.0", 22422);
+	//connection_spec_str = (char*) ubx_config_get_data_ptr(b, "connection_spec", &tmplen);
+	//printf("ZMQ connection configuration for block %s is %s\n", b->name, connection_spec_str);
 
-	// create subscriber socket and subscribe to all messages
-	server_socket = zsock_new_rep(connection_spec_str);
-//	zsock_set_subscribe(sub, "");
-
-	if (!server_socket) {
-		return ret;
-	}
-	// add pointer to subscriber to private data
-	inf->server_socket = server_socket;
-
-	return 0;
+  ret=0;
+out:
+  return ret;
 }
 
 /* start */
-int zmq_server_start(ubx_block_t *b)
+int sherpa_msg_start(ubx_block_t *b)
 {
-	struct zmq_server_info *inf = (struct zmq_server_info*) b->private_data;
-
-	// incoming data is handled by the actor thread
-	zactor_t* actor = zactor_new (receiver_actor, b);
-	inf->actor = actor;
-
-	int ret = 0;
-	return ret;
+	//struct sherpa_msg_info *inf = (struct sherpa_msg_info*) b->private_data;
+	return 0;
 }
 
 /* stop */
-void zmq_server_stop(ubx_block_t *b)
+void sherpa_msg_stop(ubx_block_t *b)
 {
-        /* struct zmq_server_info *inf = (struct zmq_server_info*) b->private_data; */
+  /* struct sherpa_msg_info *inf = (struct sherpa_msg_info*) b->private_data; */
 }
 
 /* cleanup */
-void zmq_server_cleanup(ubx_block_t *b)
+void sherpa_msg_cleanup(ubx_block_t *b)
 {
-	struct zmq_server_info *inf = (struct zmq_server_info*) b->private_data;
-	// clean up context socket
-	zctx_destroy (&inf->ctx);
-	// clean up actor thread
-	zactor_destroy(&inf->actor);
+	struct sherpa_msg_info *inf = (struct sherpa_msg_info*) b->private_data;
+  delete inf->buffer;
 	free(b->private_data);
 }
 
 /* step */
-void zmq_server_step(ubx_block_t *b)
+void sherpa_msg_step(ubx_block_t *b)
 {
 
-    struct zmq_server_info *inf = (struct zmq_server_info*) b->private_data;
-//    std::cout << "zmq_server: Processing a port update" << std::endl;
+    struct sherpa_msg_info *inf = (struct sherpa_msg_info*) b->private_data;
+//    std::cout << "sherpa_msg: Processing a port update" << std::endl;
 
 	/* Read data from port */
-	ubx_port_t* port = inf->ports.zmq_rep;
+	ubx_port_t* port = inf->ports.msg_in;
 	assert(port != 0);
 
 	ubx_data_t msg;
@@ -130,69 +95,30 @@ void zmq_server_step(ubx_block_t *b)
 	msg.len = inf->buffer_length;
 	msg.data = inf->buffer;
 
-//	std::cout << "zmq_server: Reading from port" << std::endl;
+//	std::cout << "sherpa_msg: Reading from port" << std::endl;
 	int read_bytes = __port_read(port, &msg);
 	if (read_bytes <= 0) {
-//		std::cout << "zmq_server: No data recieved from port" << std::endl;
+//		std::cout << "sherpa_msg: No data recieved from port" << std::endl;
 		return;
 	}
 
-	std::cout << "zmq_server: read bytes = " << read_bytes << std::endl;
+	std::cout << "sherpa_msg: read bytes = " << read_bytes << std::endl;
 
-	/* Setup ZMQ frame. At this point only single frames are sent. This can be replaced by zmsg_t messages
-        if multi-part messages become necessary*/
-	zframe_t* message = zframe_new(msg.data, read_bytes);
-	std::cout << "Created frame of length " << zframe_size(message) << std::endl;
+  /* Either decode or encode message */
 
-	/* Send the message */
-	int result = zframe_send(&message, inf->server_socket,0);
-	std::cout << "send message with result " << result << std::endl;
 
-}
-
-int handle_event(zloop_t *loop, zsock_t *reader, void *args) {
-	// initialization
-	ubx_block_t *b = (ubx_block_t *) args;
-	struct zmq_server_info *inf = (struct zmq_server_info*) b->private_data;
-	printf("zmq_server: data available.\n");
-
-	zframe_t *frame = zframe_recv (reader);
-	// print out frame data
-	zframe_print (frame, NULL);
-
-	// move to step function?
+  /* Write result back t0 port */
 	ubx_type_t* type =  ubx_type_get(b->ni, "unsigned char");
-	ubx_data_t msg;
-	msg.data = (void *)zframe_data(frame);
-	msg.len = zframe_size(frame);
-	msg.type = type;
+	ubx_data_t result_msg;
+//	result_msg.data = (void *)zframe_data(frame);
+//	result_msg.len = zframe_size(frame);
+	result_msg.type = type;
 
-	//hexdump((unsigned char *)msg.data, msg.len, 16);
-	__port_write(inf->ports.zmq_req, &msg);
+	//hexdump((unsigned char *)result_msg.data, result_msg.len, 16);
+	__port_write(inf->ports.msg_out, &result_msg);
 
-	/* Inform potential observers ? */
-
-	// clean up temporary frame object
-	zframe_destroy (&frame);
-
-	return 1;
 }
 
-static void
-receiver_actor (zsock_t *pipe, void *args)
-{
-    // initialization
-    ubx_block_t *b = (ubx_block_t *) args;
-    struct zmq_server_info *inf = (struct zmq_server_info*) b->private_data;
-    printf("zmq_server: actor started.\n");
-    // send signal on pipe socket to acknowledge initialisation
-    zsock_signal (pipe, 0);
 
-    zloop_t *loop = zloop_new ();
-    assert (loop);
-    int rc = zloop_reader (loop, inf->server_socket, handle_event, args);
-    assert (rc == 0);
-    zloop_start (loop);
 
-    zloop_destroy (&loop);
-}
+

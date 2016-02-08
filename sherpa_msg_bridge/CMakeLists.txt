@@ -11,8 +11,7 @@ set(INSTALL_LIB_BLOCKS_DIR lib/ubx/blocks CACHE PATH "Installation directory for
 set(INSTALL_INCLUDE_DIR include/ubx CACHE PATH "Installation directory for header files (types)")
 set(INSTALL_CMAKE_DIR  share/ubx/cmake CACHE PATH  "Installation directory for CMake files") # default ${DEF_INSTALL_CMAKE_DIR}
 
-FIND_PACKAGE(ZMQ REQUIRED) 
-FIND_PACKAGE(CZMQ REQUIRED)
+FIND_PACKAGE(LibVariant) ## json PARSER + VALIDATOR for C++
 
 # Make relative paths absolute
 foreach(p LIB_TYPES LIB_BLOCKS BIN INCLUDE CMAKE)
@@ -53,14 +52,13 @@ find_package(Microblx REQUIRED)
 
 include_directories(
   ${UBX_INCLUDE_DIR}
-  ${ZMQ_INCLUDE_DIRS} 
-  ${CZMQ_INCLUDE_DIRS}
+  ${LIBVARIANT_INCLUDE_DIRS}
 )
 
 # Compile library sherpamsglib
 add_library(sherpamsglib SHARED src/sherpa_msg_bridge.cpp )
 set_target_properties(sherpamsglib PROPERTIES PREFIX "")
-target_link_libraries(sherpamsglib ${UBX_LIBRARIES} ${CZMQ_LIBRARIES})
+target_link_libraries(sherpamsglib ${UBX_LIBRARIES} ${LIBVARIANT_LIBRARIES})
 
 # Install sherpamsglib
 install(TARGETS sherpamsglib DESTINATION ${INSTALL_LIB_BLOCKS_DIR} EXPORT sherpamsglib-block)
