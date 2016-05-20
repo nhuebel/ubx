@@ -11,8 +11,9 @@ set(INSTALL_LIB_BLOCKS_DIR lib/ubx/blocks CACHE PATH "Installation directory for
 set(INSTALL_INCLUDE_DIR include/ubx CACHE PATH "Installation directory for header files (types)")
 set(INSTALL_CMAKE_DIR  share/ubx/cmake CACHE PATH  "Installation directory for CMake files") # default ${DEF_INSTALL_CMAKE_DIR}
 
-FIND_PACKAGE(ZMQ REQUIRED) 
-FIND_PACKAGE(CZMQ REQUIRED)
+#FIND_PACKAGE(ZMQ REQUIRED) 
+#FIND_PACKAGE(CZMQ REQUIRED)
+FIND_PACKAGE(ZYRE REQUIRED)
 
 # Make relative paths absolute
 foreach(p LIB_TYPES LIB_BLOCKS BIN INCLUDE CMAKE)
@@ -53,28 +54,19 @@ find_package(Microblx REQUIRED)
 
 include_directories(
   ${UBX_INCLUDE_DIR}
-  ${ZMQ_INCLUDE_DIRS} 
-  ${CZMQ_INCLUDE_DIRS}
+  ${ZYRE_INCLUDE_DIR}
+#  ${ZMQ_INCLUDE_DIRS} 
+#  ${CZMQ_INCLUDE_DIRS}
 )
 
 # Compile library zyresenderlib
-add_library(zyresenderlib SHARED src/zyre_sender.cpp )
-set_target_properties(zyresenderlib PROPERTIES PREFIX "")
-target_link_libraries(zyresenderlib ${UBX_LIBRARIES} ${CZMQ_LIBRARIES})
+add_library(zyrebridgelib SHARED src/zyre_bridge.cpp )
+set_target_properties(zyrebridgelib PROPERTIES PREFIX "")
+target_link_libraries(zyrebridgelib ${UBX_LIBRARIES} ${ZYRE_LIBRARIES})
 
 # Install zyresenderlib
-install(TARGETS zyresenderlib DESTINATION ${INSTALL_LIB_BLOCKS_DIR} EXPORT zyresenderlib-block)
-set_property(TARGET zyresenderlib PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
-install(EXPORT zyresenderlib-block DESTINATION ${INSTALL_CMAKE_DIR})
-
-# Compile library zyrereceiverlib
-add_library(zyrereceiverlib SHARED src/zyre_receiver.cpp )
-set_target_properties(zyrereceiverlib PROPERTIES PREFIX "")
-target_link_libraries(zyrereceiverlib ${UBX_LIBRARIES} ${CZMQ_LIBRARIES})
-
-# Install zyrereceiverlib
-install(TARGETS zyrereceiverlib DESTINATION ${INSTALL_LIB_BLOCKS_DIR} EXPORT zyrereceiverlib-block)
-set_property(TARGET zyrereceiverlib PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
-install(EXPORT zyrereceiverlib-block DESTINATION ${INSTALL_CMAKE_DIR})
+install(TARGETS zyrebridgelib DESTINATION ${INSTALL_LIB_BLOCKS_DIR} EXPORT zyrebridgelib-block)
+set_property(TARGET zyrebridgelib PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
+install(EXPORT zyrebridgelib-block DESTINATION ${INSTALL_CMAKE_DIR})
 
 
