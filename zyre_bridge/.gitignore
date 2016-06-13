@@ -6,3 +6,5 @@ lib
 .externalToolBuilders
 .Readme.md.html
 .settings
+*.log
+*.kate-swp
