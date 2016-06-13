@@ -20,6 +20,9 @@ ubx_config_t zyre_bridge_config[] = {
         { .name="max_send", .type_name = "int", .doc="Max number of msgs that are sent during step fcn." },
 		{ .name="type_list", .type_name = "char", .doc="list of relevant msg types that are forwarded to RSG" },
 		{ .name="wm_name", .type_name = "char", .doc="name of the bridge in the zyre network." },
+		{ .name="local_endpoint", .type_name = "char", .doc="local endpoint for zyre network" },
+		{ .name="gossip_endpoint", .type_name = "char", .doc="endpoint for zyre gossip discovery" },
+		{ .name="group", .type_name = "char", .doc="zyre group to join" },
 		{ NULL },
 };
 
