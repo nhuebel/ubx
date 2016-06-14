@@ -50,6 +50,20 @@ int zyre_bridge_init(ubx_block_t *b)
 
         update_port_cache(b, &inf->ports);
 
+        ubx_data_t *dmy;
+        dmy = ubx_config_get_data(b, "bind");
+        //TODO: add typecheck?
+        int bind;
+        bind = *(int*) dmy->data;
+        if (bind == 1) {
+        	printf("%s: This block will bind to gossip port. \n", b->name);
+        } else if (bind == 0) {
+        	printf("%s: This block will connect to gossip port. \n", b->name);
+        } else {
+        	printf("%s: Wrong value for bind configuration. Must be 0 or 1. \n", b->name);
+        	goto out;
+        }
+
         int *max_send;
         max_send = (int*) ubx_config_get_data_ptr(b, "max_send", &tmplen);
         printf("max_send value for block %s is %d\n", b->name, *max_send);
@@ -70,7 +84,6 @@ int zyre_bridge_init(ubx_block_t *b)
         if (patch != ZYRE_VERSION_PATCH)
         	goto out;
 
-        ///TODO: do sanity checks on all the config items
         char *wm_name;
         wm_name = (char*) ubx_config_get_data_ptr(b, "wm_name", &tmplen);
         printf("zyre name for block %s is %s\n", b->name, wm_name);
@@ -181,6 +194,8 @@ void zyre_bridge_step(ubx_block_t *b)
 	//std::cout << "Received " << bla << std::endl;
 	zyre_shouts(inf->node, inf->group, "%s", bla);
 	printf("Update shouted! \n\n");
+	free(test);
+	free(bla);
 
 
 }
