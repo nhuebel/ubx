@@ -24,13 +24,17 @@ endif (NOT MSVC)
 find_path (
     ZYRE_INCLUDE_DIRS
     NAMES zyre.h
-    HINTS ${PC_ZYRE_INCLUDE_HINTS}
+    HINTS
+    /opt/zyre-1.1.0/include 
+    ${PC_ZYRE_INCLUDE_HINTS}
 )
 
 find_library (
     ZYRE_LIBRARIES
     NAMES zyre
-    HINTS ${PC_ZYRE_LIBRARY_HINTS}
+    HINTS
+    /opt/zyre-1.1.0/lib  
+    ${PC_ZYRE_LIBRARY_HINTS}
 )
 
 include(FindPackageHandleStandardArgs)
