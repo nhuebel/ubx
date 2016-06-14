@@ -52,7 +52,7 @@ int zyre_bridge_init(ubx_block_t *b)
 
         int *max_send;
         max_send = (int*) ubx_config_get_data_ptr(b, "max_send", &tmplen);
-        printf("max_send alue for block %s is %d\n", b->name, *max_send);
+        printf("max_send value for block %s is %d\n", b->name, *max_send);
         inf->max_send = max_send;
 
         ///TODO: need ot get a list of type names in here
@@ -91,7 +91,8 @@ int zyre_bridge_init(ubx_block_t *b)
 		rc = zyre_set_endpoint (node, "%s",loc_ep);
 		assert (rc == 0);
 		//  Set up gossip network for this node
-		zyre_gossip_bind (node, "%s",gos_ep);
+		///TODO: add a check that rhere is an endpoint
+		zyre_gossip_connect (node, "%s",gos_ep);
 		rc = zyre_start (node);
 		assert (rc == 0);
 
@@ -176,17 +177,11 @@ void zyre_bridge_step(ubx_block_t *b)
 	//char bla[2000];
 	//sprintf(bla,"%d",msg.data);
 	//printf("msg: %s\n", bla);
-	int *bla = (int*) msg.data;
-	std::cout << "Received " << *bla << std::endl;
+	char *bla = (char*) msg.data;
+	//std::cout << "Received " << bla << std::endl;
+	zyre_shouts(inf->node, inf->group, "%s", bla);
+	printf("Update shouted! \n\n");
 
-	/* Setup ZMQ frame. At this point only single frames are sent. This can be replaced by zmsg_t messages
-		   if multi-part messages become necessary*/
-//	zframe_t* message = zframe_new(msg.data, read_bytes);
-//	std::cout << "Created frame of length " << zframe_size(message) << std::endl;
-
-	/* Send the message */
-//	int result = zframe_send(&message, inf->publisher,0);
-//	std::cout << "send message with result " << result << std::endl;
 
 }
 
