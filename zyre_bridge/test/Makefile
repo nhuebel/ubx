@@ -6,10 +6,10 @@ CC = gcc
 CFLAGS = -Wall -ggdb
 
 # define any directories containing header files other than /usr/include
-INCLUDES = -I../include
+INCLUDES = -I../include -I/opt/zeromq-4.1.2/include -I/opt/czmq-3.0.2/include -I/opt/zyre-1.1.0/include
 
 # define library paths in addition to /usr/lib
-LFLAGS =  -L../lib
+LFLAGS =  -L../lib -L/opt/zeromq-4.1.2/lib -L/opt/czmq-3.0.2/lib -L/opt/zyre-1.1.0/lib
 
 # define any libraries to link into executable:
 LIBS = -lczmq -lzmq -lzyre -ljansson -luuid
