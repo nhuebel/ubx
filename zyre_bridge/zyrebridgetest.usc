@@ -1,5 +1,6 @@
 -- -*- mode: lua; -*-
 
+
  local rsg = require("rsg")
 
 -- Util funtion to get environment variables with default values incase they are not defined
@@ -33,26 +34,87 @@ wm:addNodeAttribute(rootId, "name", worldModelAgentName .. "_started_" .. os.dat
 --wm:addNodeAttribute(rootId, "rsg:agent_policy", "no GeometricNodes");
 wm:setLogLevel(0)
 
--- Filter settings
-local enable_input_filter = tonumber(getEnvWithDefault("SWM_ENABLE_INPUT_FILTER", 0)) 
-local input_filter_pattern = getEnvWithDefault("SWM_INPUT_FILTER_PATTERN", "os(m|g)")
-local max_transform_freq = tonumber(getEnvWithDefault("SWM_MAX_TRANSFORM_FREQ", 5.0))
 
--- Debug visualization
-local generate_dot_files = tonumber(getEnvWithDefault("SWM_GENERATE_DOT_FILES", 0))
-local generate_img_files = tonumber(getEnvWithDefault("SWM_GENERATE_IMG_FILES", 0)) -- requres generate_dot_files to be true
-local store_dot_history = tonumber(getEnvWithDefault("SWM_STORE_DOT_HISTORY", 0)) -- requres generate_dot_files to be true
+-- Convenience function to start the system in on shot
+function start_wm() -- no particular order assumed here
+--  ni:b("rsghdf5sender"):do_start()
+--  ni:b("rsghdf5receiver"):do_start()
+  ni:b("rsgjsonsender"):do_start()
+  ni:b("rsgjsonreciever"):do_start()
+  ni:b("rsgjsonqueryrunner"):do_start()
+  ni:b("rsgdump"):do_start()
+  ni:b("zmq_hdf5_publisher"):do_start()
+  ni:b("zmq_hdf5_subscriber"):do_start()
+  ni:b("zmq_hdf5_subscriber_secondary"):do_start()
+--  ni:b("zmq_json_publisher"):do_start()
+--  ni:b("zmq_json_subscriber"):do_start()
+--  ni:b("zmq_json_subscriber_secondary"):do_start()
+  ni:b("zmq_json_query_server"):do_start()
+  ni:b("ros_hdf5_publisher"):do_start()
+  ni:b("ros_hdf5_subscriber"):do_start()
+  ni:b("ros_json_publisher"):do_start()
+  ni:b("ros_json_subscriber"):do_start()
+  ni:b("bytestreambuffer1"):do_start()
+  ni:b("bytestreambuffer2"):do_start()
+  ni:b("bytestreambuffer3"):do_start()
+  ni:b("bytestreambuffer4"):do_start()
+  ni:b("bytestreambuffer5"):do_start()
+  ni:b("bytestreambuffer6"):do_start()
+  ni:b("bytestreambuffer7"):do_start()
+  ni:b("bytestreambuffer8"):do_start()
+  ni:b("bytestreambuffer9"):do_start()
+  ni:b("bytestreambuffer_query_req"):do_start()
+  ni:b("bytestreambuffer_query_rep"):do_start()
+  ni:b("zyre_local_bridge"):do_start()
+  ni:b("cyclic_io_trigger"):do_start() 
+--  ni:b("dbg_hexdump"):do_init()  
+--  ni:b("dbg_hexdump"):do_start()   
+end
 
--- Map files
-local rsg_map_file = getEnvWithDefault("SWM_RSG_MAP_FILE", "examples/maps/rsg/cesena_lab.json")
-local osm_map_file = getEnvWithDefault("SWM_OSM_MAP_FILE", "examples/maps/osm/map_micro_champoluc.osm")
+-------------------------------------------------------------------------
+
+-- depricated
+function start_viz()
+  ni:b("visualization_publisher"):do_start()
+end
+
+-- Load an Open Street Map based on the osmloader function block.
+-- Cf. "configurations" section below to configure the file that will be loaded.
+function load_map()
+  ni:b("osm"):do_start()
+  ni:b("osm"):do_step()
+end
+
+-- Loads a scene sceen setup based on a json file.
+-- Cf. "configurations" section below to configure the file that will be loaded.
+function scene_setup()
+  ni:b("scenesetup"):do_start()
+  ni:b("scenesetup"):do_step()
+end
+
+-- Trigger full syncronisation. 
+function sync()
+--  ni:b("rsghdf5sender"):do_step() -- Robot to Robot
+  ni:b("rsgjsonsender"):do_step() -- Internal Robot (Bridges)
+end
+
+function start_auto_sync()
+  ni:b("cyclic_sync_trigger"):do_start() 
+end
+
+-- This is the entry function that should be called after launch.
+-- This has to be done manually (currently).
+-- Feel free to make further aplication specific adjustments. 
+function start_all()
+--  scene_setup()
+--  load_map()
+  start_wm()
+  sync() -- just to be on the safe side
+end
 
 
+-------------------------------------------------------------------------------
 
---------------------------------------------------------------------------------------------
--- this is special for 3 x 3 robot set up
-local remote_ip_secondary = getEnvWithDefault("SWM_REMOTE_IP_SECONDARY", "127.0.0.1") 
-local remote_out_port_secondary = getEnvWithDefault("SWM_REMOTE_OUT_PORT_SECONDARY", "11611")
 
 
 -- Communication configuration with reasonable default values. Can be adapted here or 
@@ -68,45 +130,29 @@ local local_json_in_port = getEnvWithDefault("SWM_LOCAL_JSON_IN_PORT", "12911")
 local local_json_in_port_secondary = getEnvWithDefault("SWM_LOCAL_JSON_IN_PORT_SECONDARY", "13911") --workaround
 local local_json_out_port = getEnvWithDefault("SWM_LOCAL_JSON_OUT_PORT", "12912")
 local local_json_query_port = getEnvWithDefault("SWM_LOCAL_JSON_QUERY_PORT", "22422")
-----------------------------------------------------------------------------------------------
+
+-- this is special for 3 x 3 robot set up
+local remote_ip_secondary = getEnvWithDefault("SWM_REMOTE_IP_SECONDARY", "127.0.0.1") 
+local remote_out_port_secondary = getEnvWithDefault("SWM_REMOTE_OUT_PORT_SECONDARY", "11611")
 
 
--- Convenience function to start the system in on shot
-function start() -- no particular order assumed here
---  ni:b("rsghdf5sender"):do_start()
---  ni:b("rsghdf5receiver"):do_start()
---  ni:b("rsgjsonsender"):do_start()
---  ni:b("rsgjsonreciever"):do_start()
---  ni:b("rsgjsonqueryrunner"):do_start()
---  ni:b("rsgdump"):do_start()
---  ni:b("zmq_hdf5_publisher"):do_start()
---  ni:b("zmq_hdf5_subscriber"):do_start()
---  ni:b("zmq_hdf5_subscriber_secondary"):do_start()
---  ni:b("zmq_json_publisher"):do_start()
---  ni:b("zmq_json_subscriber"):do_start()
---  ni:b("zmq_json_subscriber_secondary"):do_start()
---  ni:b("zmq_json_query_server"):do_start()
---  ni:b("ros_hdf5_publisher"):do_start()
---  ni:b("ros_hdf5_subscriber"):do_start()
---  ni:b("ros_json_publisher"):do_start()
---  ni:b("ros_json_subscriber"):do_start()
---  ni:b("bytestreambuffer1"):do_start()
---  ni:b("bytestreambuffer2"):do_start()
---  ni:b("bytestreambuffer3"):do_start()
---  ni:b("bytestreambuffer4"):do_start()
---  ni:b("bytestreambuffer5"):do_start()
---  ni:b("bytestreambuffer6"):do_start()
---  ni:b("bytestreambuffer7"):do_start()
---  ni:b("bytestreambuffer8"):do_start()
---  ni:b("bytestreambuffer9"):do_start()
---  ni:b("bytestreambuffer_query_req"):do_start()
---  ni:b("bytestreambuffer_query_rep"):do_start()
-  ni:b("zyre_local_bridge"):do_init()
-  ni:b("zyre_local_bridge"):do_start()
---  ni:b("cyclic_io_trigger"):do_start() 
---  ni:b("dbg_hexdump"):do_init()  
---  ni:b("dbg_hexdump"):do_start()   
-end
+-- Filter settings
+local enable_input_filter = tonumber(getEnvWithDefault("SWM_ENABLE_INPUT_FILTER", 0)) 
+local input_filter_pattern = getEnvWithDefault("SWM_INPUT_FILTER_PATTERN", "os(m|g)")
+local max_transform_freq = tonumber(getEnvWithDefault("SWM_MAX_TRANSFORM_FREQ", 5.0))
+
+
+-- Map files
+local rsg_map_file = getEnvWithDefault("SWM_RSG_MAP_FILE", "examples/maps/rsg/cesena_lab.json")
+local osm_map_file = getEnvWithDefault("SWM_OSM_MAP_FILE", "examples/maps/osm/map_micro_champoluc.osm")
+
+
+-- Debug visualization
+local generate_dot_files = tonumber(getEnvWithDefault("SWM_GENERATE_DOT_FILES", 0))
+local generate_img_files = tonumber(getEnvWithDefault("SWM_GENERATE_IMG_FILES", 0)) -- requres generate_dot_files to be true
+local store_dot_history = tonumber(getEnvWithDefault("SWM_STORE_DOT_HISTORY", 0)) -- requres generate_dot_files to be true
+
+
 
 
 local function get_root()
@@ -122,8 +168,9 @@ return bd.system
       get_root().."std_blocks/lfds_buffers/lfds_cyclic_raw.so",
       get_root().."std_blocks/logging/file_logger.so",
       get_root().."std_blocks/hexdump/hexdump.so",
-      get_root().."std_blocks/random/random.so",
-      "build/zyrebridgelib.so",
+--      get_root().."std_blocks/random/random.so",
+      --"build/zyrebridgelib.so",
+      "blocks/zyrebridgelib.so",
       
       "std_types/stdtypes/stdtypes.so",
       "std_blocks/ptrig/ptrig.so",
@@ -142,6 +189,7 @@ return bd.system
       "blocks/rsgjsonquerylib.so",
       "blocks/rsgscenesetuplib.so",
       "blocks/rsgdumplib.so",
+      
             -- iblock based ROS bridge
       "blocks/irospublisher.so",
       
@@ -149,17 +197,16 @@ return bd.system
       "blocks/rossenderlib.so",
       "blocks/rosreceiverlib.so",
 
-
       "blocks/osmloader.so",
    },
 
    blocks = {
       --{ name="hexdump1", type="hexdump/hexdump" },
       --{ name="hexdump2", type="hexdump/hexdump" },
-      { name="inputbuffer",type="lfds_buffers/cyclic_raw" },
-      { name="outputbuffer",type="lfds_buffers/cyclic_raw" },
+--      { name="inputbuffer",type="lfds_buffers/cyclic_raw" },
+--      { name="outputbuffer",type="lfds_buffers/cyclic_raw" },
 --      { name="bridge", type="zyre_bridge" },
-      { name="randomblx", type="random/random" },
+--      { name="randomblx", type="random/random" },
       
       { name="rsgjsonsender", type="rsg_json_sender" },
       { name="rsgjsonreciever", type="rsg_json_reciever" },
@@ -167,9 +214,9 @@ return bd.system
       { name="zmq_hdf5_publisher", type="zmq_sender" },
       { name="zmq_hdf5_subscriber", type="zmq_receiver" },
       { name="zmq_hdf5_subscriber_secondary", type="zmq_receiver" },
-      { name="zmq_json_publisher", type="zmq_sender" }, -- will be replaced by zyre
-      { name="zmq_json_subscriber", type="zmq_receiver" }, -- will be replaced by zyre
-      { name="zmq_json_subscriber_secondary", type="zmq_receiver" }, -- will be replaced by zyre; workaround for having multiple local json publishers
+--      { name="zmq_json_publisher", type="zmq_sender" }, -- will be replaced by zyre
+--      { name="zmq_json_subscriber", type="zmq_receiver" }, -- will be replaced by zyre
+--      { name="zmq_json_subscriber_secondary", type="zmq_receiver" }, -- will be replaced by zyre; workaround for having multiple local json publishers
       { name="zmq_json_query_server", type="zmq_server" },
       { name="ros_hdf5_publisher", type="ros_sender" },
       { name="ros_hdf5_subscriber", type="ros_receiver" },
@@ -177,7 +224,7 @@ return bd.system
       { name="ros_json_subscriber", type="ros_receiver" },
       { name="scenesetup", type="rsg_scene_setup" },
       { name="rsgdump", type="rsg_dump" },
-            -- ZMQ
+      -- ZMQ
       { name="bytestreambuffer1",type="lfds_buffers/cyclic_raw" }, 
       { name="bytestreambuffer2",type="lfds_buffers/cyclic_raw" },
       { name="bytestreambuffer9",type="lfds_buffers/cyclic_raw" },
@@ -186,12 +233,12 @@ return bd.system
       { name="bytestreambuffer4",type="lfds_buffers/cyclic_raw" },
       { name="bytestreambuffer7",type="lfds_buffers/cyclic_raw" }, 
       { name="bytestreambuffer8",type="lfds_buffers/cyclic_raw" },
-            -- ZMQ/Zyre
+      -- ZMQ/Zyre
       { name="bytestreambuffer5",type="lfds_buffers/cyclic_raw" },
       { name="bytestreambuffer6",type="lfds_buffers/cyclic_raw" },
       { name="zyre_local_bridge", type="zyre_bridge" },
       
-            -- JSON based queries to WM
+      -- JSON based queries to WM
       { name="bytestreambuffer_query_req",type="lfds_buffers/cyclic_raw" },
       { name="bytestreambuffer_query_rep",type="lfds_buffers/cyclic_raw" },
 
@@ -206,9 +253,9 @@ return bd.system
    },
    
    connections = {
-      { src="zyre_local_bridge.zyre_in", tgt="inputbuffer" },
-      { src="outputbuffer", tgt="zyre_local_bridge.zyre_out" },
-      { src="randomblx.rnd", tgt="outputbuffer" },
+--      { src="zyre_local_bridge.zyre_in", tgt="inputbuffer" },
+--      { src="outputbuffer", tgt="zyre_local_bridge.zyre_out" },
+--      { src="randomblx.rnd", tgt="outputbuffer" },
     --  { src="randomblx.rnd", tgt="publisher.zmq_out" },
     
           -- ZMQ
@@ -239,11 +286,11 @@ return bd.system
       
             -- ZMQ/Zyre
       { src="rsgjsonsender.rsg_out", tgt="bytestreambuffer5" },
-      { src="bytestreambuffer5", tgt="zmq_json_publisher.zmq_out" },
+--      { src="bytestreambuffer5", tgt="zmq_json_publisher.zmq_out" },
       
-      { src="zmq_json_subscriber.zmq_in", tgt="bytestreambuffer6" },
+--      { src="zmq_json_subscriber.zmq_in", tgt="bytestreambuffer6" },
       { src="bytestreambuffer6", tgt="rsgjsonreciever.rsg_in" },
-      { src="zmq_json_subscriber_secondary.zmq_in", tgt="bytestreambuffer6" },
+--      { src="zmq_json_subscriber_secondary.zmq_in", tgt="bytestreambuffer6" },
       -- Zyre bridge
       { src="zyre_local_bridge.zyre_in", tgt="bytestreambuffer6" },
       { src="bytestreambuffer5", tgt="zyre_local_bridge.zyre_out" },
@@ -258,9 +305,10 @@ return bd.system
  
    configurations = {
 --      { name="bridge", config = { max_send=5 , wm_name="SWM_zyre_bridge" , type_list="test_type1" , local_endpoint="ipc:///tmp/swm_com" , gossip_endpoint="ipc:///tmp/local-hub" , group="local" } },
-{ name="zyre_local_bridge", config = { max_send=5 , wm_name="SWM_zyre_bridge" , type_list="test_type1" , local_endpoint="ipc:///tmp/swm_com" , gossip_endpoint="ipc:///tmp/local-hub" , group="local" } },
-      { name="inputbuffer", config = { element_num=100 , element_size=2000 } },
-      { name="outputbuffer", config = { element_num=100 , element_size=2000 } },
+
+{ name="zyre_local_bridge", config = { max_send=5 , wm_name="SWM_zyre_bridge" , type_list="test_type1" , local_endpoint="ipc:///tmp/sherpa_wm-2" , gossip_endpoint="ipc:///tmp/local-hub" , group="local" } },
+--      { name="inputbuffer", config = { element_num=100 , element_size=2000 } },
+--      { name="outputbuffer", config = { element_num=100 , element_size=2000 } },
       
       { name="rsgjsonreciever", 
         config =  { 
@@ -288,9 +336,9 @@ return bd.system
       { name="zmq_hdf5_publisher", config = { connection_spec="tcp://*:" .. local_out_port  } },
       { name="zmq_hdf5_subscriber", config = { connection_spec= "tcp://" .. remote_ip .. ":" .. remote_out_port  } }, 
       { name="zmq_hdf5_subscriber_secondary", config = { connection_spec= "tcp://" .. remote_ip_secondary .. ":" .. remote_out_port_secondary  } }, 
-      { name="zmq_json_publisher", config = { connection_spec="tcp://*:" .. local_json_out_port  } },
-      { name="zmq_json_subscriber", config = { connection_spec= "tcp://" .. local_json_ip .. ":" .. local_json_in_port  } },
-      { name="zmq_json_subscriber_secondary", config = { connection_spec= "tcp://" .. local_json_ip .. ":" .. local_json_in_port_secondary } },
+--      { name="zmq_json_publisher", config = { connection_spec="tcp://*:" .. local_json_out_port  } },
+--      { name="zmq_json_subscriber", config = { connection_spec= "tcp://" .. local_json_ip .. ":" .. local_json_in_port  } },
+--      { name="zmq_json_subscriber_secondary", config = { connection_spec= "tcp://" .. local_json_ip .. ":" .. local_json_in_port_secondary } },
       { name="zmq_json_query_server", config = { connection_spec="tcp://127.0.1:" .. local_json_query_port } }, 
       
       { name="ros_hdf5_subscriber", config = { topic_name="world_model/update_stream_tf_bridge" } },
@@ -319,7 +367,7 @@ return bd.system
 --            { b="#rsghdf5receiver", num_steps=1, measure=0 }, 
             { b="#rsgjsonreciever", num_steps=1, measure=0 },
             { b="#zmq_hdf5_publisher", num_steps=1, measure=0 },
-            { b="#zmq_json_publisher", num_steps=1, measure=0 },
+--            { b="#zmq_json_publisher", num_steps=1, measure=0 },
 --            { b="#ros_hdf5_publisher", num_steps=1, measure=0 },  
             { b="#ros_json_publisher", num_steps=1, measure=0 },   
             { b="#rsgjsonqueryrunner", num_steps=1, measure=0 }, 
@@ -337,7 +385,7 @@ return bd.system
           } 
         } 
       },    
-            { name="visualization_publisher", config = { topic_name="world_model/update_stream_json" } },
+	  { name="visualization_publisher", config = { topic_name="world_model/update_stream_json" } },
 
       { name="osm", config =  { wm_handle={wm = wm:getHandle().wm}, map_file=osm_map_file, convert_to_utm = 0, log_level = logLevel } }
       

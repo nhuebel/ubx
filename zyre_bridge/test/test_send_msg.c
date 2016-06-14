@@ -84,10 +84,14 @@ char* send_msg() {
     root = json_object();
     json_object_set(root, "@worldmodeltype", json_string("RSGUpdate"));
     json_object_set(root, "operation", json_string("CREATE"));
+	json_object_set(root, "parentId", json_string("e379121f-06c6-4e21-ae9d-ae78ec1986a1"));
     json_t *node;
     node = json_object();
     json_object_set(node, "@graphtype", json_string("Node"));
-    json_object_set(node, "id", json_string("92cf7a8d-4529-4abd-b174-5fabbdd3068f"));
+	zuuid_t *uuid = zuuid_new ();
+	assert(uuid);
+	//printf("UUID: %s\n",zuuid_str_canonical(uuid));
+    json_object_set(node, "id", json_string(zuuid_str_canonical(uuid)));
 	json_t *attributes;
     attributes = json_array();
 	json_t *kv;
@@ -99,7 +103,6 @@ char* send_msg() {
 	json_object_set(kv, "key", json_string("comment"));
 	json_object_set(kv, "value", json_string("Some human readable comment on the node."));
 	json_array_append_new(attributes, kv);
-	json_object_set(node, "parentId", json_string("e379121f-06c6-4e21-ae9d-ae78ec1986a1"));
 	json_object_set(node, "attributes", attributes);
     json_object_set(root, "node", node);
     char* ret = json_dumps(root, JSON_ENCODE_ANY);
