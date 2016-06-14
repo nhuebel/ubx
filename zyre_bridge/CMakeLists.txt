@@ -11,51 +11,9 @@ set(INSTALL_LIB_BLOCKS_DIR lib/ubx/blocks CACHE PATH "Installation directory for
 set(INSTALL_INCLUDE_DIR include/ubx CACHE PATH "Installation directory for header files (types)")
 set(INSTALL_CMAKE_DIR  share/ubx/cmake CACHE PATH  "Installation directory for CMake files") # default ${DEF_INSTALL_CMAKE_DIR}
 
-########################################################################
-# LIBZMQ dependency
-########################################################################
-find_package(libzmq REQUIRED)
-IF (LIBZMQ_FOUND)
-    include_directories(${LIBZMQ_INCLUDE_DIRS})
-    list(APPEND LIBS ${LIBZMQ_LIBRARIES})
-ELSE (LIBZMQ_FOUND)
-    message( FATAL_ERROR "libzmq not found." )
-ENDIF (LIBZMQ_FOUND)
-
-########################################################################
-# CZMQ dependency
-########################################################################
-find_package(czmq REQUIRED)
-IF (CZMQ_FOUND)
-    include_directories(${CZMQ_INCLUDE_DIRS})
-    list(APPEND LIBS ${CZMQ_LIBRARIES})
-ELSE (CZMQ_FOUND)
-    message( FATAL_ERROR "czmq not found." )
-ENDIF (CZMQ_FOUND)
-
-########################################################################
-# Zyre dependency
-########################################################################
-find_package(zyre REQUIRED)
-IF (ZYRE_FOUND)
-    include_directories(${ZYRE_INCLUDE_DIRS})
-    list(APPEND LIBS ${ZYRE_LIBRARIES})
-ELSE (ZYRE_FOUND)
-    message( FATAL_ERROR "zyre not found." )
-ENDIF (ZYRE_FOUND)
-
-########################################################################
-# Jansson dependency
-########################################################################
-find_package(jansson REQUIRED)
-IF (JANSSON_FOUND)
-    include_directories(${JANSSON_INCLUDE_DIRS})
-    list(APPEND LIBS ${JANSSON_LIBRARIES})
-ELSE (JANSSON_FOUND)
-    message( FATAL_ERROR "JANSSON not found." )
-ENDIF (JANSSON_FOUND)
-
-########################################################################
+FIND_PACKAGE(ZMQ REQUIRED) 
+FIND_PACKAGE(CZMQ REQUIRED)
+FIND_PACKAGE(ZYRE REQUIRED)
 
 # Make relative paths absolute
 foreach(p LIB_TYPES LIB_BLOCKS BIN INCLUDE CMAKE)
@@ -72,7 +30,7 @@ configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/cmake/cmake_uninstall.cmake"
     IMMEDIATE @ONLY)
-
+    
 add_custom_target(uninstall
     "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake/cmake_uninstall.cmake"
 )
@@ -96,9 +54,9 @@ find_package(Microblx REQUIRED)
 
 include_directories(
   ${UBX_INCLUDE_DIR}
-  ${ZYRE_INCLUDE_DIR}
   ${ZMQ_INCLUDE_DIRS} 
   ${CZMQ_INCLUDE_DIRS}
+  ${ZYRE_INCLUDE_DIR}
 )
 
 # Compile library zyrebridgelib
@@ -110,4 +68,3 @@ target_link_libraries(zyrebridgelib ${UBX_LIBRARIES} ${ZYRE_LIBRARIES})
 install(TARGETS zyrebridgelib DESTINATION ${INSTALL_LIB_BLOCKS_DIR} EXPORT zyrebridgelib-block)
 set_property(TARGET zyrebridgelib PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
 install(EXPORT zyrebridgelib-block DESTINATION ${INSTALL_CMAKE_DIR})
-

@@ -8,3 +8,5 @@ lib
 .settings
 *.log
 *.kate-swp
+*.o
+*.cmake.in
