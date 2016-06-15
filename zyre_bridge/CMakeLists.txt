@@ -56,7 +56,7 @@ include_directories(
   ${UBX_INCLUDE_DIR}
   ${ZMQ_INCLUDE_DIRS} 
   ${CZMQ_INCLUDE_DIRS}
-  ${ZYRE_INCLUDE_DIR}
+  ${ZYRE_INCLUDE_DIRS}
 )
 
 # Compile library zyrebridgelib

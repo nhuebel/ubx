@@ -21,6 +21,8 @@ else (CZMQ_LIBRARIES AND CZMQ_INCLUDE_DIRS)
 find_path(CZMQ_INCLUDE_DIR
     NAMES
     czmq.h
+    HINTS
+    /opt/czmq-3.0.2/include
     PATHS
     /usr/include
     /usr/local/include
@@ -33,6 +35,8 @@ find_path(CZMQ_INCLUDE_DIR
 find_library(CZMQ_LIBRARY
     NAMES
     czmq libczmq
+    HINTS
+    /opt/czmq-3.0.2/lib
     PATHS
     /usr/lib
     /usr/local/lib
