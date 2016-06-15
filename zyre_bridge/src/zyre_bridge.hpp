@@ -24,6 +24,7 @@ ubx_config_t zyre_bridge_config[] = {
 		{ .name="gossip_endpoint", .type_name = "char", .doc="endpoint for zyre gossip discovery" },
 		{ .name="group", .type_name = "char", .doc="zyre group to join" },
 		{ .name="bind", .type_name = "int", .doc="decides whether this node binds or connects to gossip network" },
+		{ .name="max_msg_length", .type_name = "int", .doc="max length of msg coming from RSG" },
 		{ NULL },
 };
 

@@ -19,7 +19,11 @@ struct zyre_bridge_info
 		char *type_list;
 
 		// max number of msg to send per step
-		int *max_send;
+		int max_send;
+		// max number of msg to send per step
+		unsigned long max_msg_length;
+        // Msg buffer for input port
+		unsigned char* msg_buffer;
 
 		// zyre node
 		zyre_t *node;
@@ -50,9 +54,14 @@ int zyre_bridge_init(ubx_block_t *b)
 
         update_port_cache(b, &inf->ports);
 
+        inf->msg_buffer = (unsigned char*) malloc(inf->max_msg_length*sizeof(unsigned char*));
+        if (!inf->msg_buffer){
+        	printf("%s: Could not allocate memory for msg buffer. \n", b->name);
+        	goto out;
+        }
+
         ubx_data_t *dmy;
         dmy = ubx_config_get_data(b, "bind");
-        //TODO: add typecheck?
         int bind;
         bind = *(int*) dmy->data;
         if (bind == 1) {
@@ -64,10 +73,19 @@ int zyre_bridge_init(ubx_block_t *b)
         	goto out;
         }
 
+		int *max_msg_length;
+        max_msg_length = (int*) ubx_config_get_data_ptr(b, "max_msg_length", &tmplen);
+		printf("max_msg_length value for block %s is %d\n", b->name, *max_msg_length);
+		inf->max_msg_length = *max_msg_length;
+		if (inf->max_msg_length <=0){
+			printf("ERR: %s: max_msg_length must be >0!\n",b->name);
+			goto out;
+		}
+
         int *max_send;
         max_send = (int*) ubx_config_get_data_ptr(b, "max_send", &tmplen);
         printf("max_send value for block %s is %d\n", b->name, *max_send);
-        inf->max_send = max_send;
+        inf->max_send = *max_send;
 
         ///TODO: need ot get a list of type names in here
         char *type_list;
@@ -101,10 +119,10 @@ int zyre_bridge_init(ubx_block_t *b)
         loc_ep = (char*) ubx_config_get_data_ptr(b, "local_endpoint", &tmplen);
         gos_ep = (char*) ubx_config_get_data_ptr(b, "gossip_endpoint", &tmplen);
         printf("local and gossip endpoint for block %s is %s and %s\n", b->name, loc_ep, gos_ep);
-		rc = zyre_set_endpoint (node, "%s",loc_ep);
-		assert (rc == 0);
+		//rc = zyre_set_endpoint (node, "%s",loc_ep);
+		//assert (rc == 0);
 		//  Set up gossip network for this node
-		///TODO: add a check that rhere is an endpoint
+		///TODO: add a check that there is an endpoint
 		zyre_gossip_connect (node, "%s",gos_ep);
 		rc = zyre_start (node);
 		assert (rc == 0);
@@ -152,6 +170,7 @@ void zyre_bridge_cleanup(ubx_block_t *b)
 {
 		struct zyre_bridge_info *inf = (struct zyre_bridge_info*) b->private_data;
 
+		free(inf->msg_buffer);
 		//zyre_t *node = inf->node;
 		zyre_stop (inf->node);
 		zclock_sleep (100);
@@ -164,46 +183,48 @@ void zyre_bridge_cleanup(ubx_block_t *b)
 /* step */
 void zyre_bridge_step(ubx_block_t *b)
 {
-
     struct zyre_bridge_info *inf = (struct zyre_bridge_info*) b->private_data;
 
 	/* Read data from port */
 	ubx_port_t* port = inf->ports.zyre_out;
 	assert(port != 0);
 
+	unsigned char * tmp_str = (unsigned char*) malloc(inf->max_msg_length*sizeof(unsigned char*));
+
 	ubx_data_t msg;
 	checktype(port->block->ni, port->in_type, "unsigned char", port->name, 1);
 	msg.type = port->in_type;
-	///TODO: get length from config
-	unsigned char *test = new unsigned char [2000];
-	msg.len = 2000;
-	msg.data = test;
+	msg.len = inf->max_msg_length;
+	msg.data = tmp_str;
+	//msg.data = inf->msg_buffer;
 
-	//	std::cout << "zmq_sender: Reading from port" << std::endl;
-	int read_bytes = __port_read(port, &msg);
-	if (read_bytes <= 0) {
-		//printf("zyre_bridge: No data recieved from port\n");
-		return;
-	}
+    int counter = 0;
+    while (counter < inf->max_send) {
+    	int read_bytes = __port_read(port, &msg);
 
-	printf("zyre_bridge: read bytes = %d\n",read_bytes);
-	//char bla[2000];
-	//sprintf(bla,"%d",msg.data);
-	//printf("msg: %s\n", bla);
-	char *bla = (char*) msg.data;
-	//std::cout << "Received " << bla << std::endl;
-	zyre_shouts(inf->node, inf->group, "%s", bla);
-	printf("Update shouted! \n\n");
-	free(test);
-	free(bla);
+    	//printf("read bytes: %d\n",read_bytes);
+    	//printf("step: read strlen: %lu\n",strlen((char*) msg.data));
 
+    	if (read_bytes <= 0) {
+    		//printf("zyre_bridge: No data recieved from port\n");
+    		goto out;
+    	}
+    	printf("zyrebidge: sending msg: %s\n", tmp_str);
+    	zyre_shouts(inf->node, inf->group, "%s", tmp_str);
 
+    	counter++;
+   }
+
+out:
+    free(tmp_str);
+    return;
 }
 
 
 static void
 zyre_bridge_actor (zsock_t *pipe, void *args)
 {
+
     // initialization
     ubx_block_t *b = (ubx_block_t *) args;
     struct zyre_bridge_info *inf = (struct zyre_bridge_info*) b->private_data;
