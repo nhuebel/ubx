@@ -15,6 +15,7 @@ typedef struct _query_t {
     char *msg;
 } query_t;
 
+
 json_t * load_config_file(char* file) {
     json_error_t error;
     json_t * root;
@@ -26,6 +27,7 @@ json_t * load_config_file(char* file) {
     }
     return root;
 }
+
 
 int decode_json(char* message, json_msg_t *result) {
 	/**
@@ -215,21 +217,14 @@ int main(int argc, char *argv[]) {
     }
     zlist_destroy(&tmp);
 
-    while(!zsys_interrupted && alive == 1) {
-
-
+	int i;
+    for( i = 0; i < 3; i++){
 		
-		
-    		//query mediator to send a fire and forget msg
     		printf("\n");
     		printf("#########################################\n");
-    		printf("[%s] Sending a msg without recipients (aka fire and forget msg)\n",self);
+    		printf("[%s] Sending msg %d\n",self,i);
     		printf("#########################################\n");
     		printf("\n");
-			zuuid_t *query_uuid = zuuid_new ();
-			assert (query_uuid);
-			json_t *recip = json_array();
-			assert((recip)&&(json_array_size(recip)==0));
 			char *msg = send_msg();
 			if (msg) {
 				zyre_shouts(local, localgroup, "%s", msg);
@@ -238,113 +233,113 @@ int main(int argc, char *argv[]) {
 			} else {
 				alive = false;
 			}
-			zuuid_destroy (&query_uuid);
 
 
-    	void *which = zpoller_wait (poller, ZMQ_POLL_MSEC);
-    	if (which) {
-			printf("[%s] local data received!\n", self);
-			zmsg_t *msg = zmsg_recv (which);
-			if (!msg) {
-				printf("[%s] interrupted!\n", self);
-				return -1;
-			}
-			//reset timeout
-			if (clock_gettime(CLOCK_MONOTONIC,&ts)) {
-				printf("[%s] Could not assign time stamp!\n",self);
-			}
-			char *event = zmsg_popstr (msg);
-/*			if (streq (event, "WHISPER")) {
-                assert (zmsg_size(msg) == 3);
-                char *peerid = zmsg_popstr (msg);
-                char *name = zmsg_popstr (msg);
-                char *message = zmsg_popstr (msg);
-                printf ("[%s] %s %s %s %s\n", self, event, peerid, name, message);
-                //printf("[%s] Received: %s from %s\n",self, event, name);
-				json_msg_t *result = (json_msg_t *) zmalloc (sizeof (json_msg_t));
-				if (decode_json(message, result) == 0) {
-					// load the payload as json
-					json_t *payload;
-					json_error_t error;
-					payload= json_loads(result->payload,0,&error);
-					if(!payload) {
-						printf("Error parsing JSON send_remote! line %d: %s\n", error.line, error.text);
-					} else {
-						const char *uid = json_string_value(json_object_get(payload,"UID"));
-						//TODO:does this string need to be freed?
-						if (!uid){
-							printf("[%s] Received msg without UID!\n", self);
-						} else {
-							// search through stored list of queries and check if this query corresponds to one we have sent
-							query_t *it = zlist_first(query_list);
-							int found_UUID = 0;
-							while (it != NULL) {
-								if streq(it->UID, uid) {
-									printf("[%s] Received reply to query %s.\n", self, uid);
-									if (streq(result->type,"peer-list")){
-										printf("Received peer list: %s\n",result->payload);
-										//TODO: search list for a wasp
-										alive = 0;
-
-									} else if (streq(result->type,"communication_report")){
-										printf("Received communication_report: %s\n",result->payload);
-										/////////////////////////////////////////////////
-										//Do something with the report
-										if (json_is_true(json_object_get(payload,"success"))){
-											printf("Yeay! All recipients have received the msg.\n");
-										} else {
-											printf("Sending msg was not successful because of: %s\n",json_string_value(json_object_get(payload,"error")));
-										}
-										/////////////////////////////////////////////////
-
-										if (streq(json_string_value(json_object_get(payload,"error")),"Unknown recipients")){
-											//This is really not how coordination in a program should be done -> TODO: clean up
-						
-										}
-
-									}
-									found_UUID = 1;
-									zlist_remove(query_list,it);
-									//TODO: make sure the data of that query is properly freed
-								}
-								it = zlist_next(query_list);
-							}
-							if (found_UUID == 0) {
-								printf("[%s] Received a msg with an unknown UID!\n", self);
-							}
-						}
-						json_decref(payload);
-					}
-
-
-
-				} else {
-					printf ("[%s] message could not be decoded\n", self);
-				}
-				free(result);
-				zstr_free(&peerid);
-				zstr_free(&name);
-				zstr_free(&message);
-			} else {*/
-				printf ("[%s] received %s msg\n", self, event);
-	//		}
-			zstr_free (&event);
-			zmsg_destroy (&msg);
-    	} else {
-			if (!clock_gettime(CLOCK_MONOTONIC,&curr_time)) {
-				// if timeout, stop component
-				double curr_time_msec = curr_time.tv_sec*1.0e3 +curr_time.tv_nsec*1.0e-6;
-				double ts_msec = ts.tv_sec*1.0e3 +ts.tv_nsec*1.0e-6;
-				if (curr_time_msec - ts_msec > timeout) {
-					printf("[%s] Timeout! No msg received for %i msec.\n",self,timeout);
-					break;
-				}
-			} else {
-				printf ("[%s] could not get current time\n", self);
-			}
-    		printf ("[%s] waiting for a reply. Could execute other code now.\n", self);
-    		zclock_sleep (1000);
-    	}
+//     	void *which = zpoller_wait (poller, ZMQ_POLL_MSEC);
+//     	if (which) {
+// 			printf("[%s] local data received!\n", self);
+// 			zmsg_t *msg = zmsg_recv (which);
+// 			if (!msg) {
+// 				printf("[%s] interrupted!\n", self);
+// 				return -1;
+// 			}
+// 			//reset timeout
+// 			if (clock_gettime(CLOCK_MONOTONIC,&ts)) {
+// 				printf("[%s] Could not assign time stamp!\n",self);
+// 			}
+// 			char *event = zmsg_popstr (msg);
+// 			
+// 			if (streq (event, "WHISPER")) {
+//                 assert (zmsg_size(msg) == 3);
+//                 char *peerid = zmsg_popstr (msg);
+//                 char *name = zmsg_popstr (msg);
+//                 char *message = zmsg_popstr (msg);
+//                 printf ("[%s] %s %s %s %s\n", self, event, peerid, name, message);
+//                 //printf("[%s] Received: %s from %s\n",self, event, name);
+// 				json_msg_t *result = (json_msg_t *) zmalloc (sizeof (json_msg_t));
+// 				if (decode_json(message, result) == 0) {
+// 					// load the payload as json
+// 					json_t *payload;
+// 					json_error_t error;
+// 					payload= json_loads(result->payload,0,&error);
+// 					if(!payload) {
+// 						printf("Error parsing JSON send_remote! line %d: %s\n", error.line, error.text);
+// 					} else {
+// 						const char *uid = json_string_value(json_object_get(payload,"UID"));
+// 						//TODO:does this string need to be freed?
+// 						if (!uid){
+// 							printf("[%s] Received msg without UID!\n", self);
+// 						} else {
+// 							// search through stored list of queries and check if this query corresponds to one we have sent
+// 							query_t *it = zlist_first(query_list);
+// 							int found_UUID = 0;
+// 							while (it != NULL) {
+// 								if streq(it->UID, uid) {
+// 									printf("[%s] Received reply to query %s.\n", self, uid);
+// 									if (streq(result->type,"peer-list")){
+// 										printf("Received peer list: %s\n",result->payload);
+// 										//TODO: search list for a wasp
+// 										alive = 0;
+// 
+// 									} else if (streq(result->type,"communication_report")){
+// 										printf("Received communication_report: %s\n",result->payload);
+// 										/////////////////////////////////////////////////
+// 										//Do something with the report
+// 										if (json_is_true(json_object_get(payload,"success"))){
+// 											printf("Yeay! All recipients have received the msg.\n");
+// 										} else {
+// 											printf("Sending msg was not successful because of: %s\n",json_string_value(json_object_get(payload,"error")));
+// 										}
+// 										/////////////////////////////////////////////////
+// 
+// 										if (streq(json_string_value(json_object_get(payload,"error")),"Unknown recipients")){
+// 											//This is really not how coordination in a program should be done -> TODO: clean up
+// 						
+// 										}
+// 
+// 									}
+// 									found_UUID = 1;
+// 									zlist_remove(query_list,it);
+// 									//TODO: make sure the data of that query is properly freed
+// 								}
+// 								it = zlist_next(query_list);
+// 							}
+// 							if (found_UUID == 0) {
+// 								printf("[%s] Received a msg with an unknown UID!\n", self);
+// 							}
+// 						}
+// 						json_decref(payload);
+// 					}
+// 
+// 
+// 
+// 				} else {
+// 					printf ("[%s] message could not be decoded\n", self);
+// 				}
+// 				free(result);
+// 				zstr_free(&peerid);
+// 				zstr_free(&name);
+// 				zstr_free(&message);
+// 			} else {
+// 				printf ("[%s] received %s msg\n", self, event);
+// 			}
+// 			zstr_free (&event);
+// 			zmsg_destroy (&msg);
+//     	} else {
+// 			if (!clock_gettime(CLOCK_MONOTONIC,&curr_time)) {
+// 				// if timeout, stop component
+// 				double curr_time_msec = curr_time.tv_sec*1.0e3 +curr_time.tv_nsec*1.0e-6;
+// 				double ts_msec = ts.tv_sec*1.0e3 +ts.tv_nsec*1.0e-6;
+// 				if (curr_time_msec - ts_msec > timeout) {
+// 					printf("[%s] Timeout! No msg received for %i msec.\n",self,timeout);
+// 					break;
+// 				}
+// 			} else {
+// 				printf ("[%s] could not get current time\n", self);
+// 			}
+//     		printf ("[%s] waiting for a reply. Could execute other code now.\n", self);
+//     		zclock_sleep (1000);
+//     	}
     }
 
     //free memory of all items from the query list
