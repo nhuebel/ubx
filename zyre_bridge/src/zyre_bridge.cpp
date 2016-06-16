@@ -1,7 +1,6 @@
 #include "zyre_bridge.hpp"
 #include <zyre.h>
-#include <stdlib.h>
-#include <iostream>
+#include <jansson.h>
 
 
 UBX_MODULE_LICENSE_SPDX(BSD-3-Clause)
@@ -189,7 +188,7 @@ void zyre_bridge_step(ubx_block_t *b)
 	ubx_port_t* port = inf->ports.zyre_out;
 	assert(port != 0);
 
-	unsigned char * tmp_str = (unsigned char*) malloc(inf->max_msg_length*sizeof(unsigned char*));
+	char * tmp_str = (char*) malloc(inf->max_msg_length*sizeof(char*));
 
 	ubx_data_t msg;
 	checktype(port->block->ni, port->in_type, "unsigned char", port->name, 1);
@@ -202,16 +201,28 @@ void zyre_bridge_step(ubx_block_t *b)
     while (counter < inf->max_send) {
     	int read_bytes = __port_read(port, &msg);
 
-    	//printf("read bytes: %d\n",read_bytes);
+    	//printf("zyrebidge: read bytes: %d\n",read_bytes);
     	//printf("step: read strlen: %lu\n",strlen((char*) msg.data));
 
     	if (read_bytes <= 0) {
     		//printf("zyre_bridge: No data recieved from port\n");
     		goto out;
     	}
-    	printf("zyrebidge: sending msg: %s\n", tmp_str);
-    	zyre_shouts(inf->node, inf->group, "%s", tmp_str);
+    	// port_read returns byte array. Need to add 0 termination manually to the string.
+    	tmp_str[read_bytes] = '\0';
 
+    	// create json object and embed it into msg envelope
+    	json_t *pl;
+		json_error_t error;
+		pl= json_loads(tmp_str,0,&error);
+		if(!pl) {
+			printf("Error parsing JSON payload! line %d: %s\n", error.line, error.text);
+			json_decref(pl);
+			return;
+		}
+
+		printf("zyrebidge: sending msg: %s\n", tmp_str);
+    	zyre_shouts(inf->node, inf->group, "%s", tmp_str);
     	counter++;
    }
 

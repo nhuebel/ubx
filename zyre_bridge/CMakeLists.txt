@@ -14,6 +14,7 @@ set(INSTALL_CMAKE_DIR  share/ubx/cmake CACHE PATH  "Installation directory for C
 FIND_PACKAGE(ZMQ REQUIRED) 
 FIND_PACKAGE(CZMQ REQUIRED)
 FIND_PACKAGE(ZYRE REQUIRED)
+FIND_PACKAGE(jansson REQUIRED)
 
 # Make relative paths absolute
 foreach(p LIB_TYPES LIB_BLOCKS BIN INCLUDE CMAKE)
@@ -57,12 +58,13 @@ include_directories(
   ${ZMQ_INCLUDE_DIRS} 
   ${CZMQ_INCLUDE_DIRS}
   ${ZYRE_INCLUDE_DIRS}
+  ${JANSSON_INCLUDE_DIRS}
 )
 
 # Compile library zyrebridgelib
 add_library(zyrebridgelib SHARED src/zyre_bridge.cpp )
 set_target_properties(zyrebridgelib PROPERTIES PREFIX "")
-target_link_libraries(zyrebridgelib ${UBX_LIBRARIES} ${ZYRE_LIBRARIES})
+target_link_libraries(zyrebridgelib ${UBX_LIBRARIES} ${ZYRE_LIBRARIES} ${JANSSON_LIBRARIES})
 
 # Install zyrebridgelib
 install(TARGETS zyrebridgelib DESTINATION ${INSTALL_LIB_BLOCKS_DIR} EXPORT zyrebridgelib-block)
