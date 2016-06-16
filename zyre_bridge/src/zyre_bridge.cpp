@@ -60,19 +60,6 @@ int zyre_bridge_init(ubx_block_t *b)
         	goto out;
         }
 
-        ubx_data_t *dmy;
-        dmy = ubx_config_get_data(b, "bind");
-        int bind;
-        bind = *(int*) dmy->data;
-        if (bind == 1) {
-        	printf("%s: This block will bind to gossip port. \n", b->name);
-        } else if (bind == 0) {
-        	printf("%s: This block will connect to gossip port. \n", b->name);
-        } else {
-        	printf("%s: Wrong value for bind configuration. Must be 0 or 1. \n", b->name);
-        	goto out;
-        }
-
 		int *max_msg_length;
         max_msg_length = (int*) ubx_config_get_data_ptr(b, "max_msg_length", &tmplen);
 		printf("max_msg_length value for block %s is %d\n", b->name, *max_msg_length);
@@ -114,16 +101,29 @@ int zyre_bridge_init(ubx_block_t *b)
         inf->node = node;
 
         int rc;
-        char *loc_ep;
+        //char *loc_ep;
         char *gos_ep;
-        loc_ep = (char*) ubx_config_get_data_ptr(b, "local_endpoint", &tmplen);
+        //loc_ep = (char*) ubx_config_get_data_ptr(b, "local_endpoint", &tmplen);
         gos_ep = (char*) ubx_config_get_data_ptr(b, "gossip_endpoint", &tmplen);
-        printf("local and gossip endpoint for block %s is %s and %s\n", b->name, loc_ep, gos_ep);
+        //printf("local and gossip endpoint for block %s is %s and %s\n", b->name, loc_ep, gos_ep);
 		//rc = zyre_set_endpoint (node, "%s",loc_ep);
 		//assert (rc == 0);
 		//  Set up gossip network for this node
-		///TODO: add a check that there is an endpoint
-		zyre_gossip_connect (node, "%s",gos_ep);
+
+        ubx_data_t *dmy;
+		dmy = ubx_config_get_data(b, "bind");
+		int bind;
+		bind = *(int*) dmy->data;
+		if (bind == 1) {
+			printf("%s: This block will bind to gossip endpoint '%s'\n", b->name,gos_ep);
+			zyre_gossip_bind (node, "%s", gos_ep);
+		} else if (bind == 0) {
+			printf("%s: This block will connect to gossip endpoint '%s' \n", b->name,gos_ep);
+			zyre_gossip_connect (node, "%s",gos_ep);
+		} else {
+			printf("%s: Wrong value for bind configuration. Must be 0 or 1. \n", b->name);
+			goto out;
+		}
 		rc = zyre_start (node);
 		assert (rc == 0);
 
