@@ -304,8 +304,6 @@ return bd.system
    },
  
    configurations = {
---      { name="bridge", config = { max_send=5 , wm_name="SWM_zyre_bridge" , type_list="test_type1" , local_endpoint="ipc:///tmp/swm_com" , gossip_endpoint="ipc:///tmp/local-hub" , group="local" } },
-
 { name="zyre_local_bridge", config = { bind=0, max_send=5 , max_msg_length=2000, wm_name="SWM_zyre_bridge" , type_list="test_type1" , local_endpoint="ipc:///tmp/sherpa_wm-2" , gossip_endpoint="ipc:///tmp/local-hub" , group="local" } },
 --      { name="inputbuffer", config = { element_num=100 , element_size=2000 } },
 --      { name="outputbuffer", config = { element_num=100 , element_size=2000 } },
