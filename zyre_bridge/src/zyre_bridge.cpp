@@ -1,7 +1,8 @@
 #include "zyre_bridge.hpp"
 #include <zyre.h>
 #include <jansson.h>
-
+#include <vector>
+#include <string>
 
 UBX_MODULE_LICENSE_SPDX(BSD-3-Clause)
 
@@ -21,8 +22,13 @@ struct zyre_bridge_info
 		int max_send;
 		// max number of msg to send per step
 		unsigned long max_msg_length;
-        // Msg buffer for input port
-		unsigned char* msg_buffer;
+//        // Msg buffer for input port
+//		unsigned char* msg_buffer;
+
+		//list of msg types that are accepted by the zyre bridge and handed to the RSG and length of list
+		std::vector<std::string> input_type_list ;
+		//list of msg types that coming from the RSG and will be broadcasted to local components
+		std::vector<std::string> output_type_list ;
 
 		// zyre node
 		zyre_t *node;
@@ -48,16 +54,17 @@ int zyre_bridge_init(ubx_block_t *b)
         if ((inf = (struct zyre_bridge_info*)calloc(1, sizeof(struct zyre_bridge_info)))==NULL) {
                 ERR("zyre_bridge: failed to alloc memory");
                 ret=EOUTOFMEM;
-                goto out;
+                return ret;
         }
 
         update_port_cache(b, &inf->ports);
 
-        inf->msg_buffer = (unsigned char*) malloc(inf->max_msg_length*sizeof(unsigned char*));
-        if (!inf->msg_buffer){
-        	printf("%s: Could not allocate memory for msg buffer. \n", b->name);
-        	goto out;
-        }
+        //If the following code is used, do not forget to also use the code freeing the memory in the cleanup. And also to put it into the bridge_info struct
+//        inf->msg_buffer = (unsigned char*) malloc(inf->max_msg_length*sizeof(unsigned char*));
+//        if (!inf->msg_buffer){
+//        	printf("%s: Could not allocate memory for msg buffer. \n", b->name);
+//        	goto out;
+//        }
 
 		int *max_msg_length;
         max_msg_length = (int*) ubx_config_get_data_ptr(b, "max_msg_length", &tmplen);
@@ -65,7 +72,7 @@ int zyre_bridge_init(ubx_block_t *b)
 		inf->max_msg_length = *max_msg_length;
 		if (inf->max_msg_length <=0){
 			printf("ERR: %s: max_msg_length must be >0!\n",b->name);
-			goto out;
+			return ret;
 		}
 
         int *max_send;
@@ -73,20 +80,25 @@ int zyre_bridge_init(ubx_block_t *b)
         printf("max_send value for block %s is %d\n", b->name, *max_send);
         inf->max_send = *max_send;
 
-        ///TODO: need ot get a list of type names in here
-        char *type_list;
-        type_list = (char*) ubx_config_get_data_ptr(b, "type_list", &tmplen);
-        printf("List of types for block %s is %s\n", b->name, type_list);
-        inf->type_list = type_list;
+//        ///TODO: need to get a list of type names in here
+//        char *type_list;
+//        type_list = (char*) ubx_config_get_data_ptr(b, "type_list", &tmplen);
+//        printf("List of types for block %s is %s\n", b->name, type_list);
+//        inf->type_list = type_list;
+        ///TODO: for now hardcoded list -> fix, read from comma separated string
+        inf->input_type_list.push_back("RSGUpdate_local");
+        inf->input_type_list.push_back("RSGUpdate_both");
+        inf->input_type_list.push_back("RSGQuery");
+        inf->input_type_list.push_back("RSGFunctionBlock");
 
         int major, minor, patch;
         zyre_version (&major, &minor, &patch);
         if (major != ZYRE_VERSION_MAJOR)
-        	goto out;
+        	return ret;
         if (minor != ZYRE_VERSION_MINOR)
-        	goto out;
+        	return ret;
         if (patch != ZYRE_VERSION_PATCH)
-        	goto out;
+        	return ret;
 
         char *wm_name;
         wm_name = (char*) ubx_config_get_data_ptr(b, "wm_name", &tmplen);
@@ -95,7 +107,7 @@ int zyre_bridge_init(ubx_block_t *b)
         node = zyre_new (wm_name);
         if (!node){
         	printf("Could not create a zyre node!");
-        	goto out;
+        	return ret;
         }
         inf->node = node;
 
@@ -108,7 +120,6 @@ int zyre_bridge_init(ubx_block_t *b)
 		//rc = zyre_set_endpoint (node, "%s",loc_ep);
 		//assert (rc == 0);
 		//  Set up gossip network for this node
-
         ubx_data_t *dmy;
 		dmy = ubx_config_get_data(b, "bind");
 		int bind;
@@ -121,7 +132,7 @@ int zyre_bridge_init(ubx_block_t *b)
 			zyre_gossip_connect (node, "%s",gos_ep);
 		} else {
 			printf("%s: Wrong value for bind configuration. Must be 0 or 1. \n", b->name);
-			goto out;
+			return ret;
 		}
 		rc = zyre_start (node);
 		assert (rc == 0);
@@ -137,7 +148,6 @@ int zyre_bridge_init(ubx_block_t *b)
 
         b->private_data=inf;
         ret=0;
-out:
         return ret;
 }
 
@@ -169,7 +179,7 @@ void zyre_bridge_cleanup(ubx_block_t *b)
 {
 		struct zyre_bridge_info *inf = (struct zyre_bridge_info*) b->private_data;
 
-		free(inf->msg_buffer);
+		//free(inf->msg_buffer);
 		//zyre_t *node = inf->node;
 		zyre_stop (inf->node);
 		zclock_sleep (100);
@@ -247,67 +257,91 @@ zyre_bridge_actor (zsock_t *pipe, void *args)
 	zpoller_t *poller = zpoller_new (pipe, zyre_socket (inf->node), NULL);
 	while (!terminated) {
 		void *which = zpoller_wait (poller, -1);
+		// handle msgs from main thread
 		if (which == pipe) {
 			zmsg_t *msg = zmsg_recv (which);
 			if (!msg)
 				break;              //  Interrupted
-
+			// only react to TERM signal
 			char *command = zmsg_popstr (msg);
 			if (streq (command, "$TERM"))
 				terminated = true;
-//			else
-//			if (streq (command, "SHOUT")) {
-//				char *string = zmsg_popstr (msg);
-//				printf("Internal msg through pipe: %s",string);
-//				//zyre_shouts (inf->node, "CHAT", "%s", string);
-//			}
 			else {
 				puts ("Invalid pipe message to actor");
 			}
 			free (command);
 			zmsg_destroy (&msg);
-		}
-		else
+		} else
+		// handle msgs from zyre network
 		if (which == zyre_socket (inf->node)) {
 			zmsg_t *msg = zmsg_recv (which);
+			if (!msg) {
+				printf("zyre_bridge: interrupted!\n");
+			}
 			char *event = zmsg_popstr (msg);
 			char *peer = zmsg_popstr (msg);
 			char *name = zmsg_popstr (msg);
-			char *group = zmsg_popstr (msg);
-			char *message = zmsg_popstr (msg);
 
 			if (streq (event, "ENTER"))
-				printf ("%s has joined the chat\n", name);
+				printf ("zyre_bridge: %s has entered\n", name);
 			else
 			if (streq (event, "EXIT"))
-				printf ("%s has left the chat\n", name);
+				printf ("zyre_bridge: %s has exited\n", name);
 			else
 			if (streq (event, "SHOUT")) {
-				printf ("%s: SHOUT received.\n", name);
+				printf ("zyre_bridge: SHOUT received from %s.\n", name);
 
-				ubx_type_t* type =  ubx_type_get(b->ni, "unsigned char");
-				ubx_data_t ubx_msg;
-				ubx_msg.data = (void *)message;
-				//printf("message: %s\n",message);
-				ubx_msg.len = strlen(message);
-				ubx_msg.type = type;
-				__port_write(inf->ports.zyre_in, &ubx_msg);
+				char *group = zmsg_popstr (msg);
+				char *message = zmsg_popstr (msg);
+
+				// load JSON msg
+		    	json_t *m;
+				json_error_t error;
+				m= json_loads(message,0,&error);
+				if(!m) {
+					printf("Error parsing JSON payload! line %d: %s\n", error.line, error.text);
+					json_decref(m);
+					return;
+				}
+			    if (json_object_get(m, "type")) {
+			    	for (int i=0; i < inf->input_type_list.size();i++)
+			    	{
+						if (json_string_value(json_object_get(m, "type")) == inf->input_type_list[i]){
+							ubx_type_t* type =  ubx_type_get(b->ni, "unsigned char");
+							ubx_data_t ubx_msg;
+							ubx_msg.data = (void *)message;
+							//printf("message: %s\n",message);
+							ubx_msg.len = strlen(message);
+							ubx_msg.type = type;
+							__port_write(inf->ports.zyre_in, &ubx_msg);
+						}
+			    	}
+			    } else {
+			    	printf("Error parsing JSON string! Does not conform to msg model.\n");
+			    	return;
+			    }
+
+
+				free (group);
+				free (message);
 			}
 			else
-			if (streq (event, "WHISPER"))
-				printf ("%s: WHISPER %s\n", name, message);
+			if (streq (event, "WHISPER")){
+				char *message = zmsg_popstr (msg);
+				printf ("%s: WHISPER \n%s\n", name, message);
+				free (message);
+			}
 			else
 			if (streq (event, "EVASIVE"))
-				printf ("%s is being evasive\n", name);
+				printf ("zyre_bridge: %s is being evasive\n", name);
 
 			free (event);
 			free (peer);
 			free (name);
-			free (group);
-			free (message);
 			zmsg_destroy (&msg);
 		}
 	}
 	zpoller_destroy (&poller);
+	//TODO: make parametrizable
 	zclock_sleep (100);
 }

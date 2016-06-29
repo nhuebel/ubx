@@ -17,8 +17,12 @@ char zyre_bridge_meta[] =
         "}";
 
 ubx_config_t zyre_bridge_config[] = {
+		//TODO: clean up
         { .name="max_send", .type_name = "int", .doc="Max number of msgs that are sent during step fcn." },
-		{ .name="type_list", .type_name = "char", .doc="list of relevant msg types that are forwarded to RSG" },
+//		{ .name="input_type_list", .type_name = "char", .doc="list of msg types that are accepted by the zyre bridge and handed to the RSG" },
+//		{ .name="input_type_list_len", .type_name = "int", .doc="length of the input type list" },
+//		{ .name="output_type_list", .type_name = "char", .doc="list of msg types that coming from the RSG and will be broadcasted to local components" },
+//		{ .name="output_type_list_len", .type_name = "int", .doc="length of the output type list" },
 		{ .name="wm_name", .type_name = "char", .doc="name of the bridge in the zyre network." },
 		{ .name="local_endpoint", .type_name = "char", .doc="local endpoint for zyre network" },
 		{ .name="gossip_endpoint", .type_name = "char", .doc="endpoint for zyre gossip discovery" },
