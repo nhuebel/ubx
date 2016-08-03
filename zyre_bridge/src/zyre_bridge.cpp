@@ -119,21 +119,33 @@ int zyre_bridge_init(ubx_block_t *b)
         //printf("local and gossip endpoint for block %s is %s and %s\n", b->name, loc_ep, gos_ep);
 		//rc = zyre_set_endpoint (node, "%s",loc_ep);
 		//assert (rc == 0);
-		//  Set up gossip network for this node
-        ubx_data_t *dmy;
-		dmy = ubx_config_get_data(b, "bind");
-		int bind;
-		bind = *(int*) dmy->data;
-		if (bind == 1) {
-			printf("%s: This block will bind to gossip endpoint '%s'\n", b->name,gos_ep);
-			zyre_gossip_bind (node, "%s", gos_ep);
-		} else if (bind == 0) {
-			printf("%s: This block will connect to gossip endpoint '%s' \n", b->name,gos_ep);
-			zyre_gossip_connect (node, "%s",gos_ep);
-		} else {
-			printf("%s: Wrong value for bind configuration. Must be 0 or 1. \n", b->name);
-			return ret;
-		}
+        // check if zyre or gossip shall be used
+        ubx_data_t *tmp;
+        tmp = ubx_config_get_data(b, "gossip_flag");
+        int gossip_flag;
+        gossip_flag = *(int*) tmp->data;
+        if (gossip_flag == 1){
+        	//  Set up gossip network for this node
+			ubx_data_t *dmy;
+			dmy = ubx_config_get_data(b, "bind");
+			int bind;
+			bind = *(int*) dmy->data;
+			if (bind == 1) {
+				printf("%s: This block will bind to gossip endpoint '%s'\n", b->name,gos_ep);
+				zyre_gossip_bind (node, "%s", gos_ep);
+			} else if (bind == 0) {
+				printf("%s: This block will connect to gossip endpoint '%s' \n", b->name,gos_ep);
+				zyre_gossip_connect (node, "%s",gos_ep);
+			} else {
+				printf("%s: Wrong value for bind configuration. Must be 0 or 1. \n", b->name);
+				return ret;
+			}
+        } else if (gossip_flag == 0) {
+        	//nothing to do here. if no gossip port was set, zyre will use UDP beacons automatically
+        } else {
+        	printf("%s: Wrong value for gossip_flag configuration. Must be 0 or 1. \n", b->name);
+        	return ret;
+        }
 		rc = zyre_start (node);
 		assert (rc == 0);
 
