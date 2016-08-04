@@ -15,9 +15,6 @@ static void zyre_bridge_actor(zsock_t *pipe, void *args);
 struct zyre_bridge_info
 {
         /* add custom block local data here */
-		// List of accepted msg types
-		char *type_list;
-
 		// max number of msg to send per step
 		int max_send;
 		// max number of msg to send per step

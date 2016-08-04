@@ -24,8 +24,7 @@ This message type is used by local components to trigger the execution of a func
 ### Type: RSGUpdateResult|RSGQueryResult|RSGFunctionBlockResult
 For every query to the RSG, there will be a broadcasted reply. In order to use it, filter for the corresponding result type and then look in the payload whether the result has the queryId that you gave your query.
 
-For a detailed definition of the payload, please refer to the the message schemas in their repository.
-
+For a detailed definition of the payload, please refer to the the message schemas in the repository of the RSG.
 
 ## Example code
 TODO: write an example component that 
