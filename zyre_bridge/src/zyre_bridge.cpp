@@ -83,10 +83,15 @@ int zyre_bridge_init(ubx_block_t *b)
 //        printf("List of types for block %s is %s\n", b->name, type_list);
 //        inf->type_list = type_list;
         ///TODO: for now hardcoded list -> fix, read from comma separated string
+        inf->input_type_list.push_back("RSGUpdate_global");
         inf->input_type_list.push_back("RSGUpdate_local");
         inf->input_type_list.push_back("RSGUpdate_both");
         inf->input_type_list.push_back("RSGQuery");
         inf->input_type_list.push_back("RSGFunctionBlock");
+        inf->output_type_list.push_back("RSGUpdate_global"); //updates generated for updating other RSG agents
+        inf->output_type_list.push_back("RSGUpdateResult");
+        inf->output_type_list.push_back("RSGQueryResult");
+        inf->output_type_list.push_back("RSGFunctionBlockResult");
 
         int major, minor, patch;
         zyre_version (&major, &minor, &patch);
@@ -230,7 +235,7 @@ void zyre_bridge_step(ubx_block_t *b)
     	// port_read returns byte array. Need to add 0 termination manually to the string.
     	tmp_str[read_bytes] = '\0';
 
-    	// create json object and embed it into msg envelope
+    	// create json object and...
     	json_t *pl;
 		json_error_t error;
 		pl= json_loads(tmp_str,0,&error);
@@ -239,10 +244,26 @@ void zyre_bridge_step(ubx_block_t *b)
 			json_decref(pl);
 			return;
 		}
+		// ...embed it into msg envelope
+		json_t *new_msg;
+		new_msg = json_object();
+		json_object_set(new_msg, "payload", pl);
+		json_object_set(new_msg, "metamodel", json_string("SHERPA"));
+		json_object_set(new_msg, "model", json_string("RSGUpdate"));
+		json_object_set(new_msg, "type", json_string("RSGUpdate_global"));
 
-		printf("zyrebidge: sending msg: %s\n", tmp_str);
-    	zyre_shouts(inf->node, inf->group, "%s", tmp_str);
+//        inf->output_type_list.push_back("RSGUpdate_global"); //updates generated for updating other RSG agents
+//        inf->output_type_list.push_back("RSGUpdateResult");
+//        inf->output_type_list.push_back("RSGQueryResult");
+//        inf->output_type_list.push_back("RSGFunctionBlockResult");
+
+
+		printf("zyrebidge: sending msg: %s\n", json_dumps(new_msg, JSON_ENCODE_ANY));
+    	zyre_shouts(inf->node, inf->group, "%s", json_dumps(new_msg, JSON_ENCODE_ANY));
     	counter++;
+
+    	json_decref(pl);
+    	json_decref(new_msg);
    }
 
 out:
@@ -318,16 +339,16 @@ zyre_bridge_actor (zsock_t *pipe, void *args)
 						if (json_string_value(json_object_get(m, "type")) == inf->input_type_list[i]){
 							ubx_type_t* type =  ubx_type_get(b->ni, "unsigned char");
 							ubx_data_t ubx_msg;
-							ubx_msg.data = (void *)message;
+							//ubx_msg.data = (void *)message;
+							ubx_msg.data = (void *)json_dumps(json_object_get(m, "payload"), JSON_ENCODE_ANY);
 							//printf("message: %s\n",message);
-							ubx_msg.len = strlen(message);
+							ubx_msg.len = strlen(json_dumps(json_object_get(m, "payload"), JSON_ENCODE_ANY));
 							ubx_msg.type = type;
 							__port_write(inf->ports.zyre_in, &ubx_msg);
 						}
 			    	}
 			    } else {
 			    	printf("Error parsing JSON string! Does not conform to msg model.\n");
-			    	return;
 			    }
 
 
