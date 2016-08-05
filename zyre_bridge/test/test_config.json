@@ -5,5 +5,8 @@
     "capabilities": ["send_msg","receive_msg"],
     "local_endpoint": "ipc:///tmp/sherpa_wm-test",
     "gossip_endpoint": "ipc:///tmp/local-hub",
-    "timeout": 5000
+    "timeout": 5000,
+    "no_of_updates": 5,
+	"no_of_queries": 5,
+	"no_of_fcn_block_calls": 1
 }

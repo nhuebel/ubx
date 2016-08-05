@@ -77,16 +77,16 @@ int decode_json(char* message, json_msg_t *result) {
 
 char* send_msg() {
 	/**
-	 * creates a world model update msg (fixed for now)
+	 * creates a world model update msg
 	 *
 	 * @return the string encoded JSON msg that can be sent directly via zyre. Must be freed by user! Returns NULL if wrong json types are passed in.
 	 */
 
-    json_t *root;
-    root = json_object();
-    json_object_set(root, "@worldmodeltype", json_string("RSGUpdate"));
-    json_object_set(root, "operation", json_string("CREATE"));
-	json_object_set(root, "parentId", json_string("e379121f-06c6-4e21-ae9d-ae78ec1986a1"));
+    json_t *pl;
+    pl = json_object();
+    json_object_set(pl, "@worldmodeltype", json_string("RSGUpdate"));
+    json_object_set(pl, "operation", json_string("CREATE"));
+	json_object_set(pl, "parentId", json_string("e379121f-06c6-4e21-ae9d-ae78ec1986a1"));
     json_t *node;
     node = json_object();
     json_object_set(node, "@graphtype", json_string("Node"));
@@ -106,13 +106,54 @@ char* send_msg() {
 	json_object_set(kv, "value", json_string("Some human readable comment on the node."));
 	json_array_append_new(attributes, kv);
 	json_object_set(node, "attributes", attributes);
-    json_object_set(root, "node", node);
-    char* ret = json_dumps(root, JSON_ENCODE_ANY);
+    json_object_set(pl, "node", node);
+    char* ret = json_dumps(pl, JSON_ENCODE_ANY);
 	
 	json_decref(kv);
 	json_decref(attributes);
 	json_decref(node);
-    json_decref(root);
+    json_decref(pl);
+    return ret;
+}
+
+char* send_query(char* query_type, json_t* query_params) {
+	/**
+	 * creates a query msg for the world model
+	 *
+	 * @param string query_type as string containing one of the availble query types ["GET_NODES", "GET_NODE_ATTRIBUTES", "GET_NODE_PARENTS", "GET_GROUP_CHILDREN", "GET_ROOT_NODE", "GET_REMOTE_ROOT_NODES", "GET_TRANSFORM", "GET_GEOMETRY", "GET_CONNECTION_SOURCE_IDS", "GET_CONNECTION_TARGET_IDS"]
+	 * @param json_t query_params json object containing all information required by the query; check the rsg-query-schema.json for details
+	 *
+	 * @return the string encoded JSON msg that can be sent directly via zyre. Must be freed by user! Returns NULL if wrong json types are passed in.
+	 */
+
+	// create the payload, i.e., the query
+    json_t *pl;
+    pl = json_object();
+    json_object_set(pl, "@worldmodeltype", json_string("RSGQuery"));
+    json_object_set(pl, "query", json_string(query_type));
+	zuuid_t *uuid = zuuid_new ();
+	assert(uuid);
+    //json_object_set(pl, "queryId", json_string(zuuid_str_canonical(uuid)));
+	
+	if (json_object_size(query_params)>0) {
+		const char *key;
+		json_t *value;
+		json_object_foreach(query_params, key, value) {
+			json_object_set(pl, key, value);
+		}
+	}
+	// pack it into the standard msg envelope
+	json_t *env;
+    env = json_object();
+	json_object_set(env, "metamodel", json_string("SHERPA"));
+	json_object_set(env, "model", json_string("RSGQuery"));
+	json_object_set(env, "type", json_string("RSGQuery"));
+	json_object_set(env, "payload", pl);
+	
+    char* ret = json_dumps(env, JSON_ENCODE_ANY);
+	
+	json_decref(env);
+    json_decref(pl);
     return ret;
 }
 
@@ -134,6 +175,10 @@ int main(int argc, char *argv[]) {
     bool verbose = json_is_true(json_object_get(config, "verbose"));
     int timeout = json_integer_value(json_object_get(config, "timeout"));
     assert(timeout > 0);
+	
+	int no_of_updates = json_integer_value(json_object_get(config, "no_of_updates"));
+	int no_of_queries = json_integer_value(json_object_get(config, "no_of_queries"));
+	int no_of_fcn_block_calls = json_integer_value(json_object_get(config, "no_of_fcn_block_calls"));
 
     //  Create local gossip node
     zyre_t *local = zyre_new (self);
@@ -158,9 +203,9 @@ int main(int argc, char *argv[]) {
 
     int rc;
     if(!json_is_null(json_object_get(config, "gossip_endpoint"))) {
-    	rc = zyre_set_endpoint (local, "%s", json_string_value(json_object_get(config, "local_endpoint")));
-    	assert (rc == 0);
-    	printf("[%s] using gossip with local endpoint %s\n", self, json_string_value(json_object_get(config, "local_endpoint")));
+    	//rc = zyre_set_endpoint (local, "%s", json_string_value(json_object_get(config, "local_endpoint")));
+    	//assert (rc == 0);
+    	//printf("[%s] using gossip with local endpoint %s\n", self, json_string_value(json_object_get(config, "local_endpoint")));
     	//  Set up gossip network for this node
     	zyre_gossip_connect (local, "%s", json_string_value(json_object_get(config, "gossip_endpoint")));
     	printf("[%s] using gossip with gossip hub '%s' \n", self,json_string_value(json_object_get(config, "gossip_endpoint")));
@@ -208,7 +253,7 @@ int main(int argc, char *argv[]) {
 			if (curr_time_msec - ts_msec > timeout) {
 				printf("[%s] Timeout! Could not connect to other peers.\n",self);
 				alive = 0;
-				break;
+				return 0;
 			}
 		} else {
 			printf ("[%s] could not get current time\n", self);
@@ -217,22 +262,72 @@ int main(int argc, char *argv[]) {
     }
     zlist_destroy(&tmp);
 
-	int i;
-    for( i = 0; i < 3; i++){
-		
-    		printf("\n");
-    		printf("#########################################\n");
-    		printf("[%s] Sending msg %d\n",self,i);
-    		printf("#########################################\n");
-    		printf("\n");
-			char *msg = send_msg();
-			if (msg) {
-				zyre_shouts(local, localgroup, "%s", msg);
-				printf("[%s] Sent msg: %s \n",self,msg);
-				zstr_free(&msg);
-			} else {
-				alive = false;
-			}
+    printf("\n");
+	printf("#########################################\n");
+	printf("[%s] Sending Query for RSG Root Node\n",self);
+	printf("#########################################\n");
+	printf("\n");
+	json_t* query_params;
+	char *msg = send_query("GET_ROOT_NODE",query_params);
+	zyre_shouts(local, localgroup, "%s", msg);
+	printf("[%s] Sent msg: %s \n",self,msg);
+
+
+
+
+//	int i;
+//    for( i = 0; i < no_of_updates; i++){
+//		printf("\n");
+//		printf("#########################################\n");
+//		printf("[%s] Sending Update %d\n",self,i);
+//		printf("#########################################\n");
+//		printf("\n");
+//		char *msg = send_msg();
+//		if (msg) {
+//			zyre_shouts(local, localgroup, "%s", msg);
+//			printf("[%s] Sent msg: %s \n",self,msg);
+//			zstr_free(&msg);
+//		} else {
+//			alive = false;
+//		}
+//		free(msg);
+//	}
+	
+//	for( i = 0; i < no_of_queries; i++){
+//		printf("\n");
+//		printf("#########################################\n");
+//		printf("[%s] Sending Query %d\n",self,i);
+//		printf("#########################################\n");
+//		printf("\n");
+////		char *msg = send_query();
+//		char *msg = send_msg();
+//		if (msg) {
+//			zyre_shouts(local, localgroup, "%s", msg);
+//			printf("[%s] Sent msg: %s \n",self,msg);
+//			zstr_free(&msg);
+//		} else {
+//			alive = false;
+//		}
+//		free(msg);
+//	}
+	
+//	for( i = 0; i < no_of_fcn_block_calls; i++){
+//		printf("\n");
+//		printf("#########################################\n");
+//		printf("[%s] Sending Function Block Call %d\n",self,i);
+//		printf("#########################################\n");
+//		printf("\n");
+////		char *msg = send_query();
+//		char *msg = send_msg();
+//		if (msg) {
+//			zyre_shouts(local, localgroup, "%s", msg);
+//			printf("[%s] Sent msg: %s \n",self,msg);
+//			zstr_free(&msg);
+//		} else {
+//			alive = false;
+//		}
+//		free(msg);
+//	}
 
 
 //     	void *which = zpoller_wait (poller, ZMQ_POLL_MSEC);
@@ -340,7 +435,6 @@ int main(int argc, char *argv[]) {
 //     		printf ("[%s] waiting for a reply. Could execute other code now.\n", self);
 //     		zclock_sleep (1000);
 //     	}
-    }
 
     //free memory of all items from the query list
     query_t *it;

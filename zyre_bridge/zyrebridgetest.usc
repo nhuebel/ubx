@@ -11,7 +11,7 @@ function getEnvWithDefault(variableName, defaultValue)
   return envVariable    
 end
 
-local logLevel = tonumber(getEnvWithDefault("SWM_LOG_LEVEL", 1)) --  LOGDEBUG = 0, INFO = 1, WARNING = 2, LOGERROR = 3, FATAL = 4
+local logLevel = tonumber(getEnvWithDefault("SWM_LOG_LEVEL", 0)) --  LOGDEBUG = 0, INFO = 1, WARNING = 2, LOGERROR = 3, FATAL = 4
 
 -- create an inctance of the RSG to serve as World Model Agent for the robot 
 local worldModelAgentName = getEnvWithDefault("SWM_WMA_NAME", "swm") -- human radable name to better identify this WMA; Moslty for debugging

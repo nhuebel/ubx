@@ -342,6 +342,7 @@ zyre_bridge_actor (zsock_t *pipe, void *args)
 					json_decref(m);
 					return;
 				}
+				printf("%s\n",message);
 			    if (json_object_get(m, "type")) {
 			    	for (int i=0; i < inf->input_type_list.size();i++)
 			    	{
@@ -349,7 +350,7 @@ zyre_bridge_actor (zsock_t *pipe, void *args)
 							ubx_type_t* type =  ubx_type_get(b->ni, "unsigned char");
 							ubx_data_t ubx_msg;
 							ubx_msg.data = (void *)json_dumps(json_object_get(m, "payload"), JSON_ENCODE_ANY);
-							//printf("message: %s\n",message);
+							printf("message: %s\n",json_dumps(json_object_get(m, "payload"), JSON_ENCODE_ANY));
 							ubx_msg.len = strlen(json_dumps(json_object_get(m, "payload"), JSON_ENCODE_ANY));
 							ubx_msg.type = type;
 							__port_write(inf->ports.zyre_in, &ubx_msg);
