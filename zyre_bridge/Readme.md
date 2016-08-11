@@ -62,7 +62,7 @@ This assumes that you have built the bridge as described above.
 ```sh
 roscore
 ```
-* In the second run a bridge with a different configuration (see in the .usc file). This one has to be started first if gossip is used.
+* In the second run a bridge with a binding configuration (see in the .usc file). This one has to be started first if gossip is used.
 ```sh
 ./run_zyre_bridge_test.sh
 start_all()
@@ -74,16 +74,13 @@ start_all()
 ```
 You should see that the two RSGs announce their root nodes to each other.
 
-* In the fourth run a component that sends different messages and waites for the corresponding replies.
+* In the fourth run a component that sends different messages and waites for the corresponding replies. (This can also be run without the basic bridge.)
 ```sh
 cd test
 ./test_send_msg
 ```
 You should see that the component sends some update, query, and function block messages to the local RSG. It also waits for the reply and displays it. You can use this component as a template for your own development.
 
-
-
-dot -Tps rsg_dump_swm_2016-08-04_17-02-23.gv -o test.ps
 
 ## License
 
