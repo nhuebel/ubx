@@ -361,12 +361,63 @@ void handle_shout(component_t *self, zmsg_t *msg) {
 	json_msg_t *result = (json_msg_t *) zmalloc (sizeof (json_msg_t));
 	if (decode_json(message, result) == 0) {
 		printf ("[%s] message type %s\n", self->name, result->type);
-		if (streq (result->type, "query_remote_peer_list")) {
-
-		} else if (streq (result->type, "send_request")) {
-
-		} else if (streq (result->type, "query_remote_file")) {
-
+		if (streq (result->type, "RSGUpdateResult")) {
+			// load the payload as json
+			json_t *payload;
+			json_error_t error;
+			payload= json_loads(result->payload,0,&error);
+			if(!payload) {
+				printf("Error parsing JSON send_remote! line %d: %s\n", error.line, error.text);
+			} else {
+				query_t *it = zlist_first(self->query_list);
+				while (it != NULL) {
+					if (streq(it->uid,json_string_value(json_object_get(payload,"queryId")))) {
+						///TODO: how does update result message from sebastian look like? and what to do with it?
+						query_t *dummy = it;
+						it = zlist_next(self->query_list);
+						zlist_remove(self->query_list,dummy);
+						break;
+					}
+				}
+			}
+		} else if (streq (result->type, "RSGQueryResult")) {
+			// load the payload as json
+			json_t *payload;
+			json_error_t error;
+			payload= json_loads(result->payload,0,&error);
+			if(!payload) {
+				printf("Error parsing JSON send_remote! line %d: %s\n", error.line, error.text);
+			} else {
+				query_t *it = zlist_first(self->query_list);
+				while (it != NULL) {
+					if (streq(it->uid,json_string_value(json_object_get(payload,"queryId")))) {
+						///TODO: what to do with the query result??
+						query_t *dummy = it;
+						it = zlist_next(self->query_list);
+						zlist_remove(self->query_list,dummy);
+						break;
+					}
+				}
+			}
+		} else if (streq (result->type, "RSGFunctionBlockResult")) {
+			// load the payload as json
+			json_t *payload;
+			json_error_t error;
+			payload= json_loads(result->payload,0,&error);
+			if(!payload) {
+				printf("Error parsing JSON send_remote! line %d: %s\n", error.line, error.text);
+			} else {
+				query_t *it = zlist_first(self->query_list);
+				while (it != NULL) {
+					if (streq(it->uid,json_string_value(json_object_get(payload,"queryId")))) {
+						///TODO: what to do with the function block result
+						query_t *dummy = it;
+						it = zlist_next(self->query_list);
+						zlist_remove(self->query_list,dummy);
+						break;
+					}
+				}
+			}
 		} else {
 			printf("[%s] Unknown msg type!",self->name);
 		}
@@ -459,12 +510,12 @@ int main(int argc, char *argv[]) {
 	char *msg = send_query(self,"GET_ROOT_NODE",query_params);
 	zyre_shouts(self->local, self->localgroup, "%s", msg);
 	printf("[%s] Sent msg: %s \n",self->name,msg);
-	//printf("[%s] Queries in queue: %d \n",self->name,zlist_size (self->query_list));
 	if (clock_gettime(CLOCK_MONOTONIC,&ts)) {
 		printf("[%s] Could not assign time stamp!\n",self->name);
 	}
 	//wait for query to be answered
 	while (zlist_size (self->query_list) > 0){
+		//printf("[%s] Queries in queue: %d \n",self->name,zlist_size (self->query_list));
 		void *which = zpoller_wait (self->poller, ZMQ_POLL_MSEC);
 		if (which) {
 			zmsg_t *msg = zmsg_recv (which);
