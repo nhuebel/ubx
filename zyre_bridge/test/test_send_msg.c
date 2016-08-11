@@ -44,6 +44,11 @@ void destroy_component (component_t **self_p) {
     assert (self_p);
     if(*self_p) {
     	component_t *self = *self_p;
+    	zyre_stop (self->local);
+		printf ("[%s] Stopping zyre node.\n", self->name);
+		zclock_sleep (100);
+		zyre_destroy (&self->local);
+		printf ("[%s] Destroying component.\n", self->name);
         zyre_destroy (&self->local);
         json_decref(self->config);
         zpoller_destroy (&self->poller);
@@ -309,6 +314,90 @@ char* send_query(component_t* self, char* query_type, json_t* query_params) {
     return ret;
 }
 
+void handle_enter(component_t *self, zmsg_t *msg) {
+	assert (zmsg_size(msg) == 4);
+	char *peerid = zmsg_popstr (msg);
+	char *name = zmsg_popstr (msg);
+	zframe_t *headers_packed = zmsg_pop (msg);
+	assert (headers_packed);
+	zhash_t *headers = zhash_unpack (headers_packed);
+	assert (headers);
+	printf("header type %s\n",(char *) zhash_lookup (headers, "type"));
+	char *address = zmsg_popstr (msg);
+	printf ("[%s] ENTER %s %s <headers> %s\n", self->name, peerid, name, address);
+	zstr_free(&peerid);
+	zstr_free(&name);
+	zframe_destroy(&headers_packed);
+	zstr_free(&address);
+}
+
+void handle_exit(component_t *self, zmsg_t *msg) {
+	assert (zmsg_size(msg) == 2);
+	char *peerid = zmsg_popstr (msg);
+	char *name = zmsg_popstr (msg);
+	printf ("[%s] EXIT %s %s\n", self->name, peerid, name);
+	zstr_free(&peerid);
+	zstr_free(&name);
+}
+
+void handle_whisper (component_t *self, zmsg_t *msg) {
+	assert (zmsg_size(msg) == 3);
+	char *peerid = zmsg_popstr (msg);
+	char *name = zmsg_popstr (msg);
+	char *message = zmsg_popstr (msg);
+	printf ("[%s] WHISPER %s %s %s\n", self->name, peerid, name, message);
+	zstr_free(&peerid);
+	zstr_free(&name);
+	zstr_free(&message);
+}
+
+void handle_shout(component_t *self, zmsg_t *msg) {
+	assert (zmsg_size(msg) == 4);
+	char *peerid = zmsg_popstr (msg);
+	char *name = zmsg_popstr (msg);
+	char *group = zmsg_popstr (msg);
+	char *message = zmsg_popstr (msg);
+	printf ("[%s] SHOUT %s %s %s %s\n", self->name, peerid, name, group, message);
+	json_msg_t *result = (json_msg_t *) zmalloc (sizeof (json_msg_t));
+	if (decode_json(message, result) == 0) {
+		printf ("[%s] message type %s\n", self->name, result->type);
+		if (streq (result->type, "query_remote_peer_list")) {
+
+		} else if (streq (result->type, "send_request")) {
+
+		} else if (streq (result->type, "query_remote_file")) {
+
+		} else {
+			printf("[%s] Unknown msg type!",self->name);
+		}
+	} else {
+		printf ("[%s] message could not be decoded\n", self->name);
+	}
+	free(result);
+	zstr_free(&peerid);
+	zstr_free(&name);
+	zstr_free(&group);
+}
+
+void handle_join (component_t *self, zmsg_t *msg) {
+	assert (zmsg_size(msg) == 3);
+	char *peerid = zmsg_popstr (msg);
+	char *name = zmsg_popstr (msg);
+	char *group = zmsg_popstr (msg);
+	printf ("[%s] JOIN %s %s %s\n", self->name, peerid, name, group);
+	zstr_free(&peerid);
+	zstr_free(&name);
+	zstr_free(&group);
+}
+
+void handle_evasive (component_t *self, zmsg_t *msg) {
+	assert (zmsg_size(msg) == 2);
+	char *peerid = zmsg_popstr (msg);
+	char *name = zmsg_popstr (msg);
+	printf ("[%s] EVASIVE %s %s\n", self->name, peerid, name);
+	zstr_free(&peerid);
+	zstr_free(&name);
+}
 
 int main(int argc, char *argv[]) {
 
@@ -351,11 +440,7 @@ int main(int argc, char *argv[]) {
 			double ts_msec = ts.tv_sec*1.0e3 +ts.tv_nsec*1.0e-6;
 			if (curr_time_msec - ts_msec > self->timeout) {
 				printf("[%s] Timeout! Could not connect to other peers.\n",self->name);
-				zyre_stop (self->local);
-				printf ("[%s] Stopping...", self->name);
-				zclock_sleep (100);
-				zyre_destroy (&self->local);
-				printf ("[%s] SHUTDOWN\n", self->name);
+				destroy_component(&self);
 				return 0;
 			}
 		} else {
@@ -374,12 +459,53 @@ int main(int argc, char *argv[]) {
 	char *msg = send_query(self,"GET_ROOT_NODE",query_params);
 	zyre_shouts(self->local, self->localgroup, "%s", msg);
 	printf("[%s] Sent msg: %s \n",self->name,msg);
-	printf("[%s] Queries in queue: %d \n",self->name,zlist_size (self->query_list));
+	//printf("[%s] Queries in queue: %d \n",self->name,zlist_size (self->query_list));
+	if (clock_gettime(CLOCK_MONOTONIC,&ts)) {
+		printf("[%s] Could not assign time stamp!\n",self->name);
+	}
 	//wait for query to be answered
-	//while (zlist_size (self->query_list) > 0){
+	while (zlist_size (self->query_list) > 0){
 		void *which = zpoller_wait (self->poller, ZMQ_POLL_MSEC);
-		//if (which) {
-	//}
+		if (which) {
+			zmsg_t *msg = zmsg_recv (which);
+			if (!msg) {
+				printf("[%s] interrupted!\n", self->name);
+				return -1;
+			}
+			//zmsg_print(msg); printf("msg end\n");
+			char *event = zmsg_popstr (msg);
+			if (streq (event, "ENTER")) {
+				handle_enter (self, msg);
+			} else if (streq (event, "EXIT")) {
+				handle_exit (self, msg);
+			} else if (streq (event, "SHOUT")) {
+				handle_shout (self, msg);
+			} else if (streq (event, "WHISPER")) {
+				handle_whisper (self, msg);
+			} else if (streq (event, "JOIN")) {
+				handle_join (self, msg);
+			} else if (streq (event, "EVASIVE")) {
+				handle_evasive (self, msg);
+			} else {
+				zmsg_print(msg);
+			}
+			zstr_free (&event);
+			zmsg_destroy (&msg);
+		}
+		//check for timeout
+		if (!clock_gettime(CLOCK_MONOTONIC,&curr_time)) {
+			// if timeout, stop component
+			double curr_time_msec = curr_time.tv_sec*1.0e3 +curr_time.tv_nsec*1.0e-6;
+			double ts_msec = ts.tv_sec*1.0e3 +ts.tv_nsec*1.0e-6;
+			if (curr_time_msec - ts_msec > self->timeout) {
+				printf("[%s] Timeout! No query answer received.\n",self->name);
+				destroy_component(&self);
+				return 0;
+			}
+		} else {
+			printf ("[%s] could not get current time\n", self->name);
+		}
+	}
 
 
 
@@ -667,11 +793,7 @@ int main(int argc, char *argv[]) {
 
 
 
-    zyre_stop (self->local);
-	printf ("[%s] Stopping zyre.\n", self->name);
-	zclock_sleep (100);
-    zyre_destroy (&self->local);
-    printf ("[%s] Destroying component.\n", self->name);
+
     destroy_component(&self);
     //  @end
     printf ("SHUTDOWN\n");
