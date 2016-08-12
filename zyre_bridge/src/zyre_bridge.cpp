@@ -88,7 +88,7 @@ int zyre_bridge_init(ubx_block_t *b)
         inf->input_type_list.push_back("RSGUpdate_both");
         inf->input_type_list.push_back("RSGQuery");
         inf->input_type_list.push_back("RSGFunctionBlock");
-        inf->output_type_list.push_back("RSGUpdate_global"); //updates generated for updating other RSG agents
+        inf->output_type_list.push_back("RSGUpdate"); //updates generated for updating other RSG agents, will be mapped to RSGUpdate_global
         inf->output_type_list.push_back("RSGUpdateResult");
         inf->output_type_list.push_back("RSGQueryResult");
         inf->output_type_list.push_back("RSGFunctionBlockResult");
