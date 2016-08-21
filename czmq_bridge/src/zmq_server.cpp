@@ -6,7 +6,7 @@
 
 UBX_MODULE_LICENSE_SPDX(BSD-3-Clause)
 
-const unsigned int DEFAULT_BUFFER_LENGTH = 20000;
+const unsigned int DEFAULT_BUFFER_LENGTH = 90000;
 
 static void receiver_actor(zsock_t *pipe, void *args);
 /* define a structure for holding the block local state. By assigning an
