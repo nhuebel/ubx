@@ -257,7 +257,7 @@ void zyre_bridge_step(ubx_block_t *b)
 		{
 			if (tmp_type.compare(inf->output_type_list[i])) {
 				// need to handle exception for updates generated from RSG due to local updates
-				if (tmp_type.compare("RSGUpdate")) {
+				if (tmp_type.compare("RSGUpdate") == 0) {
 					json_object_set(new_msg, "model", json_string("RSGUpdate"));
 					json_object_set(new_msg, "type", json_string("RSGUpdate_global"));
 				} else {
@@ -344,9 +344,14 @@ zyre_bridge_actor (zsock_t *pipe, void *args)
 				}
 				printf("%s\n",message);
 			    if (json_object_get(m, "type")) {
+			    	std::string type = json_dumps(json_object_get(m, "type"), JSON_ENCODE_ANY);
+			    	printf("type: %s\n",json_dumps(json_object_get(m, "type"), JSON_ENCODE_ANY));
+
 			    	for (int i=0; i < inf->input_type_list.size();i++)
 			    	{
-						if (json_string_value(json_object_get(m, "type")) == inf->input_type_list[i]){
+						//if (json_string_value(json_object_get(m, "type")) == inf->input_type_list[i]){
+			    		printf("type list, type : %s, %s \n", inf->input_type_list[i].c_str(), type.c_str());
+						if (inf->input_type_list[i].compare(type) == 0) {
 							ubx_type_t* type =  ubx_type_get(b->ni, "unsigned char");
 							ubx_data_t ubx_msg;
 							ubx_msg.data = (void *)json_dumps(json_object_get(m, "payload"), JSON_ENCODE_ANY);
