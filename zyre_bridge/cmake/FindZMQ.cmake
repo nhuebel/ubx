@@ -21,11 +21,13 @@ else (ZMQ_LIBRARIES AND ZMQ_INCLUDE_DIRS)
 find_path(ZMQ_INCLUDE_DIR
     NAMES
     zmq.h
+    HINTS
+    /opt/zeromq-4.1.2/include
     PATHS
     /usr/include
     /usr/local/include
     /opt/local/include
-    /sw/include
+    /sw/include    
     ${ZMQ_ROOT}/include
     ENV{ZMQ_ROOT}/include
 )
@@ -33,7 +35,9 @@ find_path(ZMQ_INCLUDE_DIR
 find_library(ZMQ_LIBRARY
     NAMES
     zmq libzmq
-    PATHS
+    HINTS
+    /opt/zeromq-4.1.2/lib
+    PATH
     /usr/lib
     /usr/local/lib
     /opt/local/lib

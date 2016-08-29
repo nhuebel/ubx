@@ -5,3 +5,9 @@ lib
 .project
 .externalToolBuilders
 .Readme.md.html
+.settings
+*.log
+*.kate-swp
+*.o
+*.cmake.in
+test/test_send_msg
