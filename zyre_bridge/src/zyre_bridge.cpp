@@ -86,6 +86,7 @@ int zyre_bridge_init(ubx_block_t *b)
         inf->input_type_list.push_back("RSGUpdate_global");
         inf->input_type_list.push_back("RSGUpdate_local");
         inf->input_type_list.push_back("RSGUpdate_both");
+        inf->input_type_list.push_back("RSGUpdate");
         inf->input_type_list.push_back("RSGQuery");
         inf->input_type_list.push_back("RSGFunctionBlock");
         inf->output_type_list.push_back("RSGUpdate"); //updates generated for updating other RSG agents, will be mapped to RSGUpdate_global
@@ -346,6 +347,7 @@ zyre_bridge_actor (zsock_t *pipe, void *args)
 			    if (json_object_get(m, "type")) {
 			    	for (int i=0; i < inf->input_type_list.size();i++)
 			    	{
+			    		printf("typelist, type: %s\n",inf->input_type_list[i],json_string_value(json_object_get(m, "type")));
 						if (json_string_value(json_object_get(m, "type")) == inf->input_type_list[i]){
 							ubx_type_t* type =  ubx_type_get(b->ni, "unsigned char");
 							ubx_data_t ubx_msg;
