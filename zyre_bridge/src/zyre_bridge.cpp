@@ -345,6 +345,7 @@ zyre_bridge_actor (zsock_t *pipe, void *args)
 				printf("%s\n",message);
 			    if (json_object_get(m, "type")) {
 			    	std::string type = json_dumps(json_object_get(m, "type"), JSON_ENCODE_ANY);
+			    	type = type.substr(1, type.size()-2); // get rid of " characters
 			    	printf("type: %s\n",json_dumps(json_object_get(m, "type"), JSON_ENCODE_ANY));
 
 			    	for (int i=0; i < inf->input_type_list.size();i++)
