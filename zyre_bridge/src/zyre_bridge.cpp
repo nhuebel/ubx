@@ -266,7 +266,7 @@ void zyre_bridge_step(ubx_block_t *b)
 					json_object_set(new_msg, "type", json_string(tmp_type.c_str()));
 				}
 			} else {
-				printf("[zyre_bridge] Unknown output type!");
+				printf("[zyre_bridge] Unknown output type: %s!\n",tmp_type.c_str());
 			}
 		}
 		printf("[zyrebidge] sending msg: %s\n", json_dumps(new_msg, JSON_ENCODE_ANY));
@@ -289,7 +289,7 @@ zyre_bridge_actor (zsock_t *pipe, void *args)
     // initialization
     ubx_block_t *b = (ubx_block_t *) args;
     struct zyre_bridge_info *inf = (struct zyre_bridge_info*) b->private_data;
-    printf("zyre_bridge: actor started.\n");
+    printf("[zyre_bridge]: actor started.\n");
     // send signal on pipe socket to acknowledge initialization
     zsock_signal (pipe, 0);
 
@@ -316,20 +316,20 @@ zyre_bridge_actor (zsock_t *pipe, void *args)
 		if (which == zyre_socket (inf->node)) {
 			zmsg_t *msg = zmsg_recv (which);
 			if (!msg) {
-				printf("zyre_bridge: interrupted!\n");
+				printf("[zyre_bridge]: interrupted!\n");
 			}
 			char *event = zmsg_popstr (msg);
 			char *peer = zmsg_popstr (msg);
 			char *name = zmsg_popstr (msg);
 
 			if (streq (event, "ENTER"))
-				printf ("zyre_bridge: %s has entered\n", name);
+				printf ("[zyre_bridge]: %s has entered\n", name);
 			else
 			if (streq (event, "EXIT"))
-				printf ("zyre_bridge: %s has exited\n", name);
+				printf ("[zyre_bridge]: %s has exited\n", name);
 			else
 			if (streq (event, "SHOUT")) {
-				printf ("zyre_bridge: SHOUT received from %s.\n", name);
+				printf ("[zyre_bridge]: SHOUT received from %s.\n", name);
 
 				char *group = zmsg_popstr (msg);
 				char *message = zmsg_popstr (msg);
@@ -352,7 +352,7 @@ zyre_bridge_actor (zsock_t *pipe, void *args)
 			    	for (int i=0; i < inf->input_type_list.size();i++)
 			    	{
 						//if (json_string_value(json_object_get(m, "type")) == inf->input_type_list[i]){
-			    		printf("type list, type : %s, %s \n", inf->input_type_list[i].c_str(), type.c_str());
+			    		//printf("type list, type : %s, %s \n", inf->input_type_list[i].c_str(), type.c_str());
 						if (inf->input_type_list[i].compare(type) == 0) {
 							ubx_type_t* type =  ubx_type_get(b->ni, "unsigned char");
 							ubx_data_t ubx_msg;
@@ -379,7 +379,7 @@ zyre_bridge_actor (zsock_t *pipe, void *args)
 			}
 			else
 			if (streq (event, "EVASIVE"))
-				printf ("zyre_bridge: %s is being evasive\n", name);
+				printf ("[zyre_bridge]: %s is being evasive\n", name);
 
 			free (event);
 			free (peer);
