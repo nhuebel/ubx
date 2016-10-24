@@ -234,6 +234,7 @@ void zyre_bridge_step(ubx_block_t *b)
     		free(tmp_str);
     		return;
     	}
+//    	printf("zyrebridge: read bytes: %d\n",read_bytes);
     	// port_read returns byte array. Need to add 0 termination manually to the string.
     	tmp_str[read_bytes] = '\0';
 
@@ -247,13 +248,15 @@ void zyre_bridge_step(ubx_block_t *b)
 			free(tmp_str);
 			return;
 		}
+//    	printf("[zyrebidge] retrieving msg: %s\n", json_dumps(pl, JSON_ENCODE_ANY));
 		// ...check for its type and embed it into msg envelope
 		json_t *new_msg;
 		new_msg = json_object();
 		json_object_set(new_msg, "payload", pl);
 		json_object_set(new_msg, "metamodel", json_string("SHERPA"));
-		if(json_object_get(pl, "@worldmodeltype")) {
-			printf("Error parsing RSG payload! @worldmodeltype is missing.\n");
+		if(json_object_get(pl, "@worldmodeltype") == 0) {
+			printf("[zyrebidge] retrieving msg: %s\n", json_dumps(pl, JSON_ENCODE_ANY));
+			printf("[zyrebidge] Error parsing RSG payload! @worldmodeltype is missing.\n");
 			json_decref(pl);
 			free(tmp_str);
 			return;
