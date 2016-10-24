@@ -252,7 +252,13 @@ void zyre_bridge_step(ubx_block_t *b)
 		new_msg = json_object();
 		json_object_set(new_msg, "payload", pl);
 		json_object_set(new_msg, "metamodel", json_string("SHERPA"));
-		std::string tmp_type = json_string_value(json_object_get(pl, "@worldmodeltype"));
+		if(json_object_get(pl, "@worldmodeltype")) {
+			printf("Error parsing RSG payload! @worldmodeltype is missing.\n");
+			json_decref(pl);
+			free(tmp_str);
+			return;
+		}
+		std::string tmp_type = json_string_value(json_object_get(pl, "@worldmodeltype")); //can segfault
 		for (int i=0; i < inf->output_type_list.size();i++)
 		{
 			if (tmp_type.compare(inf->output_type_list[i])) {
