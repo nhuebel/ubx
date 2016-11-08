@@ -309,7 +309,7 @@ return bd.system
    },
  
    configurations = {
-{ name="zyre_test_bridge", config = { bind=1, max_send=5 , max_msg_length=2000, wm_name="SWM_zyre_test_bridge" , local_endpoint="ipc:///tmp/sherpa_wm-2" , gossip_endpoint="ipc:///tmp/local-hub" , group="local", gossip_flag = 1 } },
+{ name="zyre_test_bridge", config = { mediator=1, bind=0, max_send=5 , max_msg_length=2000, wm_name="SWM_zyre_test_bridge" , local_endpoint="ipc:///tmp/sherpa_wm-2" , gossip_endpoint="ipc:///tmp/local-hub" , group="local", gossip_flag = 1 } },
 --      { name="inputbuffer", config = { element_num=100 , element_size=2000 } },
 --      { name="outputbuffer", config = { element_num=100 , element_size=2000 } },
       

@@ -40,6 +40,47 @@ struct zyre_bridge_info
         struct zyre_bridge_port_cache ports;
 };
 
+
+char* send_request(const char *uid, const char *local_req, json_t *recipients, int timeout, const char* payload_type, json_t *msg_payload) {
+	/**
+	 * creates a query to the mediator to send a msg
+	 *
+	 * @param uid that is used to identify the answer to the query
+	 * @param list of recipients as json array; msg is always broadcasted, but recipients on this list need to acknowledge the msg
+	 * @param timeout after which mediator will stop resending msg
+	 * @param payload_type as string that identifies payload
+	 * @param payload as json object
+	 *
+	 * @return the string encoded JSON msg that can be sent directly via zyre. Must be freed by user! Returns NULL if wrong json types are passed in.
+	 */
+
+	if (!json_is_array(recipients)) {
+		printf("ERROR: Recipients are not a json array! \n");
+		return NULL;
+	}
+	if (!json_is_object(msg_payload)) {
+		printf("ERROR: Payload is not a json object! \n");
+		return NULL;
+	}
+    json_t *root;
+    root = json_object();
+    json_object_set(root, "metamodel", json_string("sherpa_mgs"));
+    json_object_set(root, "model", json_string("http://kul/send_request.json"));
+    json_object_set(root, "type", json_string("send_request"));
+    json_t *payload;
+    payload = json_object();
+    json_object_set(payload, "UID", json_string(uid));
+    json_object_set(payload, "local_requester", json_string(local_req));
+    json_object_set(payload, "recipients", recipients);
+    json_object_set(payload, "timeout", json_integer(timeout));
+    json_object_set(payload, "payload_type", json_string(payload_type));
+    json_object_set(payload, "payload", msg_payload);
+    json_object_set(root, "payload", payload);
+    char* ret = json_dumps(root, JSON_ENCODE_ANY);
+    json_decref(root);
+    return ret;
+}
+
 /* init */
 int zyre_bridge_init(ubx_block_t *b)
 {
@@ -262,7 +303,9 @@ void zyre_bridge_step(ubx_block_t *b)
 			free(tmp_str);
 			return;
 		}
+
 		std::string tmp_type = json_string_value(json_object_get(pl, "@worldmodeltype")); //can segfault
+		char *send_msg;
 		for (int i=0; i < inf->output_type_list.size();i++)
 		{
 			if (tmp_type.compare(inf->output_type_list[i])) {
@@ -270,16 +313,34 @@ void zyre_bridge_step(ubx_block_t *b)
 				if (tmp_type.compare("RSGUpdate") == 0) {
 					json_object_set(new_msg, "model", json_string("RSGUpdate"));
 					json_object_set(new_msg, "type", json_string("RSGUpdate_global"));
+
+					//  If used with mediator, add send_request envelope
+					ubx_data_t *dmy;
+					dmy = ubx_config_get_data(b, "mediator");
+					int mediator;
+					mediator = *(int*) dmy->data;
+					if (mediator == 1) {
+						zuuid_t *query_uuid = zuuid_new ();
+						assert (query_uuid);
+						json_t *recip = json_array();
+						assert((recip)&&(json_array_size(recip)==0));
+						send_msg = send_request(zuuid_str(query_uuid),zyre_uuid(inf->node),recip,1000,"WMupdate",new_msg);
+					}
+					else {
+						send_msg = json_dumps(new_msg, JSON_ENCODE_ANY);
+					}
 				} else {
 					json_object_set(new_msg, "model", json_string(tmp_type.c_str()));
 					json_object_set(new_msg, "type", json_string(tmp_type.c_str()));
+					send_msg = json_dumps(new_msg, JSON_ENCODE_ANY);
 				}
 			} else {
 				printf("[zyre_bridge] Unknown output type: %s!\n",tmp_type.c_str());
 			}
 		}
-		printf("[zyrebidge] sending msg: %s\n", json_dumps(new_msg, JSON_ENCODE_ANY));
-    	zyre_shouts(inf->node, inf->group, "%s", json_dumps(new_msg, JSON_ENCODE_ANY));
+
+		printf("[zyrebidge] sending msg: %s\n", send_msg);
+    	zyre_shouts(inf->node, inf->group, "%s", send_msg);
     	counter++;
 
     	json_decref(pl);
@@ -400,3 +461,4 @@ zyre_bridge_actor (zsock_t *pipe, void *args)
 	//TODO: make parametrizable
 	zclock_sleep (100);
 }
+
