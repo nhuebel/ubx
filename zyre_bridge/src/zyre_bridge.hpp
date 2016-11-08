@@ -30,6 +30,7 @@ ubx_config_t zyre_bridge_config[] = {
 		{ .name="bind", .type_name = "int", .doc="decides whether this node binds or connects to gossip network" },
 		{ .name="gossip_flag", .type_name = "int", .doc="1 for using gossip locally; 0 for using a global zyre network" },
 		{ .name="max_msg_length", .type_name = "int", .doc="max length of msg coming from RSG" },
+		{ .name="mediator", .type_name = "int", .doc="1 for using the mediator, 0 for using without" },
 		{ NULL },
 };
 
