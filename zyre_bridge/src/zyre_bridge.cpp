@@ -324,7 +324,7 @@ void zyre_bridge_step(ubx_block_t *b)
 						assert (query_uuid);
 						json_t *recip = json_array();
 						assert((recip)&&(json_array_size(recip)==0));
-						send_msg = send_request(zuuid_str(query_uuid),zyre_uuid(inf->node),recip,1000,"WMupdate",new_msg);
+						send_msg = send_request(zuuid_str(query_uuid),zyre_uuid(inf->node),recip,1000,"send_remote",new_msg);
 					}
 					else {
 						send_msg = json_dumps(new_msg, JSON_ENCODE_ANY);
