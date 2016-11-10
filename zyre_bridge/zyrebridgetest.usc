@@ -37,7 +37,7 @@ function start_wm() -- no particular order assumed here
 --  ni:b("rsghdf5sender"):do_start()
 --  ni:b("rsghdf5receiver"):do_start()
   ni:b("rsgjsonsender"):do_start()
-  ni:b("rsgjsonreciever"):do_start()
+--  ni:b("rsgjsonreciever"):do_start()
   ni:b("rsgjsonqueryrunner"):do_start()
   ni:b("rsgdump"):do_start()
   ni:b("zmq_hdf5_publisher"):do_start()
@@ -60,6 +60,7 @@ function start_wm() -- no particular order assumed here
   ni:b("bytestreambuffer7"):do_start()
   ni:b("bytestreambuffer8"):do_start()
   ni:b("bytestreambuffer9"):do_start()
+  ni:b("query_rep_buf"):do_start()
   ni:b("bytestreambuffer_query_req"):do_start()
   ni:b("bytestreambuffer_query_rep"):do_start()
   ni:b("zyre_test_bridge"):do_start()
@@ -236,6 +237,7 @@ return bd.system
       { name="bytestreambuffer8",type="lfds_buffers/cyclic_raw" },
       -- ZMQ/Zyre
       { name="bytestreambuffer5",type="lfds_buffers/cyclic_raw" },
+      { name="query_rep_buf",type="lfds_buffers/cyclic_raw" },
       { name="bytestreambuffer6",type="lfds_buffers/cyclic_raw" },
       { name="zyre_test_bridge", type="zyre_bridge" },
       
@@ -293,19 +295,21 @@ return bd.system
       { src="bytestreambuffer6", tgt="rsgjsonreciever.rsg_in" },
 --      { src="zmq_json_subscriber_secondary.zmq_in", tgt="bytestreambuffer6" },
       -- Zyre bridge
-      { src="zyre_test_bridge.zyre_in", tgt="bytestreambuffer6" },
+      { src="zyre_test_bridge.zyre_in", tgt="bytestreambuffer_query_req" },
       { src="bytestreambuffer5", tgt="zyre_test_bridge.zyre_out" },
+      { src="rsgjsonqueryrunner.rsg_result", tgt="query_rep_buf" },
+      { src="query_rep_buf", tgt="zyre_test_bridge.zyre_out" },
 
       -- ZMQ REQ-REP server and JSON query runner
-      { src="zmq_json_query_server.zmq_req", tgt="bytestreambuffer_query_req" },
+--      { src="zmq_json_query_server.zmq_req", tgt="bytestreambuffer_query_req" },
 --      { src="zmq_json_query_server.zmq_req", tgt="dbg_hexdump" }, --DBG
       { src="bytestreambuffer_query_req", tgt="rsgjsonqueryrunner.rsq_query" },
-      { src="rsgjsonqueryrunner.rsg_result", tgt="bytestreambuffer_query_rep" },
+--      { src="rsgjsonqueryrunner.rsg_result", tgt="bytestreambuffer_query_rep" },
       { src="bytestreambuffer_query_rep", tgt="zmq_json_query_server.zmq_rep" },
    },
  
    configurations = {
-{ name="zyre_test_bridge", config = { bind=1, max_send=5 , max_msg_length=2000, wm_name="SWM_zyre_test_bridge" , local_endpoint="ipc:///tmp/sherpa_wm-2" , gossip_endpoint="ipc:///tmp/local-hub" , group="local", gossip_flag = 1 } },
+{ name="zyre_test_bridge", config = { mediator=1, bind=0, max_send=5 , max_msg_length=2000, wm_name="SWM_zyre_test_bridge" , local_endpoint="ipc:///tmp/sherpa_wm-2" , gossip_endpoint="ipc:///tmp/local-hub" , group="local", gossip_flag = 1 } },
 --      { name="inputbuffer", config = { element_num=100 , element_size=2000 } },
 --      { name="outputbuffer", config = { element_num=100 , element_size=2000 } },
       
@@ -347,7 +351,7 @@ return bd.system
       { name="scenesetup", config =  { wm_handle={wm = wm:getHandle().wm}, rsg_file=rsg_map_file } },
       { name="rsgdump", config =  { wm_handle={wm = wm:getHandle().wm}, dot_name_prefix = "rsg_dump_" .. worldModelAgentName } },
       
-            { name="bytestreambuffer1", config = { element_num=6000 , element_size=20000 } },
+      { name="bytestreambuffer1", config = { element_num=6000 , element_size=20000 } },
       { name="bytestreambuffer2", config = { element_num=500 , element_size=20000 } },
       { name="bytestreambuffer3", config = { element_num=50 , element_size=20000 } },
       { name="bytestreambuffer4", config = { element_num=50 , element_size=20000 } },
@@ -358,13 +362,14 @@ return bd.system
       { name="bytestreambuffer9", config = { element_num=500 , element_size=20000 } },
       { name="bytestreambuffer_query_req", config = { element_num=50 , element_size=90000 } },
       { name="bytestreambuffer_query_rep", config = { element_num=50 , element_size=90000 } },
+      { name="query_rep_buf", config = { element_num=50 , element_size=90000 } },
       
       { name="cyclic_io_trigger", -- Note: on first failure the other blocks are not triggered any more...
         config = { 
           period = {sec=0, usec=100 }, 
           trig_blocks={ 
 --            { b="#rsghdf5receiver", num_steps=1, measure=0 }, 
-            { b="#rsgjsonreciever", num_steps=1, measure=0 },
+--            { b="#rsgjsonreciever", num_steps=1, measure=0 },
             { b="#zmq_hdf5_publisher", num_steps=1, measure=0 },
 --            { b="#zmq_json_publisher", num_steps=1, measure=0 },
 --            { b="#ros_hdf5_publisher", num_steps=1, measure=0 },  
