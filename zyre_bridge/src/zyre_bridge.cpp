@@ -415,33 +415,31 @@ zyre_bridge_actor (zsock_t *pipe, void *args)
 				if(!m) {
 					printf("Error parsing JSON payload! line %d: %s\n", error.line, error.text);
 					json_decref(m);
-					return;
-				}
-				printf("%s\n",message);
-			    if (json_object_get(m, "type")) {
-			    	std::string type = json_dumps(json_object_get(m, "type"), JSON_ENCODE_ANY);
-			    	type = type.substr(1, type.size()-2); // get rid of " characters
-			    	printf("type: %s\n",json_dumps(json_object_get(m, "type"), JSON_ENCODE_ANY));
+				} else {
+					printf("%s\n",message);
+					if (json_object_get(m, "type")) {
+						std::string type = json_dumps(json_object_get(m, "type"), JSON_ENCODE_ANY);
+						type = type.substr(1, type.size()-2); // get rid of " characters
+						printf("type: %s\n",json_dumps(json_object_get(m, "type"), JSON_ENCODE_ANY));
 
-			    	for (int i=0; i < inf->input_type_list.size();i++)
-			    	{
-						//if (json_string_value(json_object_get(m, "type")) == inf->input_type_list[i]){
-			    		//printf("type list, type : %s, %s \n", inf->input_type_list[i].c_str(), type.c_str());
-						if (inf->input_type_list[i].compare(type) == 0) {
-							ubx_type_t* type =  ubx_type_get(b->ni, "unsigned char");
-							ubx_data_t ubx_msg;
-							ubx_msg.data = (void *)json_dumps(json_object_get(m, "payload"), JSON_ENCODE_ANY);
-							printf("message: %s\n",json_dumps(json_object_get(m, "payload"), JSON_ENCODE_ANY));
-							ubx_msg.len = strlen(json_dumps(json_object_get(m, "payload"), JSON_ENCODE_ANY));
-							ubx_msg.type = type;
-							__port_write(inf->ports.zyre_in, &ubx_msg);
+						for (int i=0; i < inf->input_type_list.size();i++)
+						{
+							//if (json_string_value(json_object_get(m, "type")) == inf->input_type_list[i]){
+							//printf("type list, type : %s, %s \n", inf->input_type_list[i].c_str(), type.c_str());
+							if (inf->input_type_list[i].compare(type) == 0) {
+								ubx_type_t* type =  ubx_type_get(b->ni, "unsigned char");
+								ubx_data_t ubx_msg;
+								ubx_msg.data = (void *)json_dumps(json_object_get(m, "payload"), JSON_ENCODE_ANY);
+								printf("message: %s\n",json_dumps(json_object_get(m, "payload"), JSON_ENCODE_ANY));
+								ubx_msg.len = strlen(json_dumps(json_object_get(m, "payload"), JSON_ENCODE_ANY));
+								ubx_msg.type = type;
+								__port_write(inf->ports.zyre_in, &ubx_msg);
+							}
 						}
-			    	}
-			    } else {
-			    	printf("Error parsing JSON string! Does not conform to msg model.\n");
-			    }
-
-
+					} else {
+						printf("Error parsing JSON string! Does not conform to msg model.\n");
+					}
+				}
 				free (group);
 				free (message);
 			}
