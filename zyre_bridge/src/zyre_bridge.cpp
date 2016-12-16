@@ -285,7 +285,7 @@ void zyre_bridge_step(ubx_block_t *b)
 		json_error_t error;
 		pl= json_loads(tmp_str,0,&error);
 		if(!pl) {
-			printf("Error parsing JSON payload! line %d: %s\n", error.line, error.text);
+			printf("Error parsing JSON payload! line %d, column %d: %s\n", error.line, error.column, error.text);
 			json_decref(pl);
 			free(tmp_str);
 			return;
@@ -413,7 +413,7 @@ zyre_bridge_actor (zsock_t *pipe, void *args)
 				json_error_t error;
 				m= json_loads(message,0,&error);
 				if(!m) {
-					printf("Error parsing JSON payload! line %d: %s\n", error.line, error.text);
+					printf("Error parsing JSON payload! line %d, column %d: %s\n", error.line, error.column, error.text);
 					json_decref(m);
 				} else {
 					printf("%s\n",message);
